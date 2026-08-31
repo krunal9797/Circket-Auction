@@ -143,14 +143,16 @@ const AppContent: React.FC = () => {
       <footer className="mt-20 border-t border-slate-800/80 bg-slate-950/95 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-lg">
               🏏
             </div>
             <div>
-              <span className="font-sports text-lg font-bold text-white tracking-wider block">
-                CRICKET AUCTION PRO
+              <span className="font-sports text-xl font-bold text-white tracking-wider block">
+                CRICKET AUCTION PRO • KPL
               </span>
-              <span className="text-[10px] text-amber-400">“Bid. Build. Conquer.” • Standard ₹1,00,000 Team Purse</span>
+              <span className="text-[11px] text-amber-400 font-semibold">
+                Katasvan Premier League 2026 • Standard ₹1,00,000 Team Purse
+              </span>
             </div>
           </div>
 
@@ -165,8 +167,13 @@ const AppContent: React.FC = () => {
             <button onClick={() => setCurrentTab('admin')} className="text-amber-400 hover:underline">Admin Desk</button>
           </div>
 
-          <div className="text-center md:text-right text-[11px] text-slate-500">
-            IPL-Style Real-time Engine with Web Audio Synthesizer & INR Formats.
+          <div className="text-center md:text-right text-xs">
+            <div className="text-white font-bold">
+              Built & Designed by <span className="text-amber-400">Er. Krunal Gamit</span>
+            </div>
+            <div className="text-[11px] text-slate-500 mt-0.5">
+              Live Cloud Firestore Synchronized Auction Platform
+            </div>
           </div>
         </div>
       </footer>

@@ -191,86 +191,93 @@ export const LeaderboardPage: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-950 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="py-4 px-5 text-center">Rank</th>
-                <th className="py-4 px-5">Team Franchise</th>
-                <th className="py-4 px-5">Captain & Owner</th>
-                <th className="py-4 px-5 text-center">Squad Size</th>
-                <th className="py-4 px-5 text-right">Total Spent</th>
-                <th className="py-4 px-5 text-right">Remaining Budget</th>
-                <th className="py-4 px-5 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {rankedTeams.map((team, index) => {
-                const rank = index + 1;
-                const isTop3 = rank <= 3;
+          {rankedTeams.length === 0 ? (
+            <div className="p-12 text-center text-slate-400">
+              <p className="text-base font-semibold text-slate-300">No teams found on Firestore database.</p>
+              <p className="text-xs text-slate-500 mt-1">Add your tournament teams in the Admin Desk to see standings.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-950 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="py-4 px-5 text-center">Rank</th>
+                  <th className="py-4 px-5">Team Franchise</th>
+                  <th className="py-4 px-5">Captain & Owner</th>
+                  <th className="py-4 px-5 text-center">Squad Size</th>
+                  <th className="py-4 px-5 text-right">Total Spent</th>
+                  <th className="py-4 px-5 text-right">Remaining Budget</th>
+                  <th className="py-4 px-5 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {rankedTeams.map((team, index) => {
+                  const rank = index + 1;
+                  const isTop3 = rank <= 3;
 
-                return (
-                  <tr key={team.id} className="hover:bg-slate-800/40 transition">
-                    {/* Rank Badge */}
-                    <td className="py-4 px-5 text-center">
-                      <span className={`w-8 h-8 rounded-xl font-digital font-black text-sm inline-flex items-center justify-center ${
-                        rank === 1
-                          ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/30'
-                          : rank === 2
-                          ? 'bg-slate-300 text-black shadow'
-                          : rank === 3
-                          ? 'bg-amber-700 text-white shadow'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
-                      </span>
-                    </td>
+                  return (
+                    <tr key={team.id} className="hover:bg-slate-800/40 transition">
+                      {/* Rank Badge */}
+                      <td className="py-4 px-5 text-center">
+                        <span className={`w-8 h-8 rounded-xl font-digital font-black text-sm inline-flex items-center justify-center ${
+                          rank === 1
+                            ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/30'
+                            : rank === 2
+                            ? 'bg-slate-300 text-black shadow'
+                            : rank === 3
+                            ? 'bg-amber-700 text-white shadow'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
+                        </span>
+                      </td>
 
-                    {/* Team Name + Logo */}
-                    <td className="py-4 px-5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{team.logo}</span>
-                        <div>
-                          <strong className="text-white font-bold block text-base">{team.name}</strong>
-                          <span className="text-xs text-amber-400 font-digital">{team.shortCode}</span>
+                      {/* Team Name + Logo */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{team.logo}</span>
+                          <div>
+                            <strong className="text-white font-bold block text-base">{team.name}</strong>
+                            <span className="text-xs text-amber-400 font-digital">{team.shortCode}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Captain & Owner */}
-                    <td className="py-4 px-5 text-xs text-slate-300">
-                      <div>Cap: <strong className="text-slate-100">{team.captain}</strong></div>
-                      <div className="text-slate-400 text-[11px]">Own: {team.owner}</div>
-                    </td>
+                      {/* Captain & Owner */}
+                      <td className="py-4 px-5 text-xs text-slate-300">
+                        <div>Cap: <strong className="text-slate-100">{team.captain}</strong></div>
+                        <div className="text-slate-400 text-[11px]">Own: {team.owner}</div>
+                      </td>
 
-                    {/* Squad Count */}
-                    <td className="py-4 px-5 text-center font-digital font-bold text-base text-white">
-                      {team.playersBought}
-                    </td>
+                      {/* Squad Count */}
+                      <td className="py-4 px-5 text-center font-digital font-bold text-base text-white">
+                        {team.playersBought}
+                      </td>
 
-                    {/* Spent */}
-                    <td className="py-4 px-5 text-right font-digital text-base font-extrabold text-red-400">
-                      {formatINR(team.totalSpent)}
-                    </td>
+                      {/* Spent */}
+                      <td className="py-4 px-5 text-right font-digital text-base font-extrabold text-red-400">
+                        {formatINR(team.totalSpent)}
+                      </td>
 
-                    {/* Remaining */}
-                    <td className="py-4 px-5 text-right font-digital text-base font-extrabold text-amber-400">
-                      {formatINR(team.remainingBudget)}
-                    </td>
+                      {/* Remaining */}
+                      <td className="py-4 px-5 text-right font-digital text-base font-extrabold text-amber-400">
+                        {formatINR(team.remainingBudget)}
+                      </td>
 
-                    {/* View Squad Action */}
-                    <td className="py-4 px-5 text-center">
-                      <button
-                        onClick={() => viewTeamDetails(team.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
-                      >
-                        Squad Roster
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* View Squad Action */}
+                      <td className="py-4 px-5 text-center">
+                        <button
+                          onClick={() => viewTeamDetails(team.id)}
+                          className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
+                        >
+                          Squad Roster
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

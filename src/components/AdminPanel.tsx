@@ -47,6 +47,7 @@ export const AdminPanel: React.FC = () => {
     updateTeam,
     deleteTeam,
     resetEntireAuction,
+    clearAllServerData,
     reseedDatabase,
     placeBid,
     setCurrentTab,
@@ -302,31 +303,31 @@ export const AdminPanel: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={async () => {
-              if (window.confirm('Reseed Cloud Firestore with standard IPL players and team rosters?')) {
+              if (window.confirm('WARNING: Are you sure you want to completely WIPE ALL PLAYERS AND TEAMS from Cloud Firestore server? This will delete all current records so only your new data will exist.')) {
                 setIsReseeding(true);
-                await reseedDatabase();
+                await clearAllServerData();
                 setIsReseeding(false);
               }
             }}
             disabled={isReseeding}
-            className="px-3.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 hover:bg-emerald-900/80 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
-            title="Reseed Cloud Firestore with fresh tournament dataset"
+            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-red-500/50 hover:bg-red-950/50 text-slate-300 hover:text-red-300 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+            title="Delete all data from Firestore and start from zero"
           >
-            <RefreshCw className={`w-4 h-4 ${isReseeding ? 'animate-spin' : ''}`} />
-            <span>{isReseeding ? 'Syncing...' : 'Reseed Cloud DB'}</span>
+            <Trash2 className="w-4 h-4 text-red-400" />
+            <span>Wipe Server Data (0 DB)</span>
           </button>
 
           <button
             onClick={() => {
-              if (window.confirm('Are you sure you want to reset all auction data and restart with clean ₹1,00,000 budgets?')) {
+              if (window.confirm('Are you sure you want to reset current auction bids and restore all team budgets?')) {
                 resetEntireAuction();
               }
             }}
             className="px-4 py-2 rounded-xl bg-red-950/80 border border-red-500/40 hover:bg-red-900/80 text-red-300 text-xs font-bold transition flex items-center gap-1.5"
-            title="Reset all bids and restore initial database"
+            title="Reset all bids and restore purses"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Reset All Auction Data</span>
+            <span>Reset Bids & Purses</span>
           </button>
         </div>
       </div>
@@ -345,7 +346,7 @@ export const AdminPanel: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-sm">Google Cloud Firestore Database</span>
+              <span className="font-bold text-white text-sm">Cloud Firestore Live Database</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                 syncStatus === 'synced'
                   ? 'bg-emerald-500 text-black'
@@ -353,20 +354,13 @@ export const AdminPanel: React.FC = () => {
                   ? 'bg-amber-500 text-black animate-pulse'
                   : 'bg-slate-700 text-slate-300'
               }`}>
-                {syncStatus === 'synced' ? 'Active Realtime Sync' : syncStatus}
+                {syncStatus === 'synced' ? 'Realtime Connected' : syncStatus}
               </span>
             </div>
             <p className="text-slate-400 text-[11px] mt-0.5">
-              Live multi-device bidding, real-time purse recalculation, and permanent tournament storage.
-              {lastSyncedAt && ` (Last activity: ${lastSyncedAt.toLocaleTimeString()})`}
+              Only real data entered by you is stored and synced live across all connected devices.
+              {lastSyncedAt && ` (Last sync: ${lastSyncedAt.toLocaleTimeString()})`}
             </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 text-[11px]">
-          <div className="bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-            <span className="text-slate-400">Database ID: </span>
-            <span className="text-amber-400 font-mono text-[10px]">ai-studio-cricketauctionpr-...</span>
           </div>
         </div>
       </div>

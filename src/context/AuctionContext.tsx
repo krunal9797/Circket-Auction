@@ -51,7 +51,7 @@ interface AuctionContextType {
   resetTimer: (seconds?: number) => Promise<void>;
   toggleAutoAiBidding: () => Promise<void>;
 
-  // CRUD Operations
+  // CRUD Operations on Firebase Server
   addPlayer: (newPlayerData: Omit<Player, 'id' | 'bidHistory' | 'status'>) => Promise<void>;
   updatePlayer: (playerId: string, updatedData: Partial<Player>) => Promise<void>;
   deletePlayer: (playerId: string) => Promise<void>;
@@ -59,6 +59,7 @@ interface AuctionContextType {
   updateTeam: (teamId: string, updatedData: Partial<Team>) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   resetEntireAuction: () => Promise<void>;
+  clearAllServerData: () => Promise<void>;
   reseedDatabase: () => Promise<void>;
 
   // Metrics
@@ -75,10 +76,6 @@ interface AuctionContextType {
     averageSoldPrice: number;
   };
 }
-
-const STORAGE_KEY_PLAYERS = 'cricket_auction_players_v1';
-const STORAGE_KEY_TEAMS = 'cricket_auction_teams_v1';
-const STORAGE_KEY_AUCTION = 'cricket_auction_state_v1';
 
 const DEFAULT_AUCTION_STATE: AuctionState = {
   isLive: false,
@@ -99,36 +96,16 @@ const DEFAULT_AUCTION_STATE: AuctionState = {
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Local fallback/cache
-  const [players, setPlayers] = useState<Player[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_PLAYERS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return INITIAL_PLAYERS;
-  });
-
-  const [teams, setTeams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_TEAMS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return INITIAL_TEAMS;
-  });
-
-  const [auctionState, setAuctionState] = useState<AuctionState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_AUCTION);
-    if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
-    }
-    return DEFAULT_AUCTION_STATE;
-  });
+  // Pure server data state - empty initial, real-time populated by Firebase
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [auctionState, setAuctionState] = useState<AuctionState>(DEFAULT_AUCTION_STATE);
 
   const [currentTab, setCurrentTab] = useState<ViewTab>('home');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'team_bidder' | 'spectator'>('team_bidder');
-  const [activeBiddingTeamId, setActiveBiddingTeamId] = useState<string>('team-tigers');
+  const [activeBiddingTeamId, setActiveBiddingTeamId] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // Firestore sync states
@@ -136,20 +113,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'synced' | 'offline' | 'error'>('connecting');
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
-  // Local storage cache backup
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PLAYERS, JSON.stringify(players));
-  }, [players]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
-  }, [teams]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_AUCTION, JSON.stringify(auctionState));
-  }, [auctionState]);
-
-  // Seed / Reseed Database in Firestore
+  // Seed / Reseed Database in Firestore with sample data if user chooses
   const seedDatabase = useCallback(async () => {
     try {
       const batch = writeBatch(db);
@@ -171,13 +135,48 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       batch.set(auctionRef, DEFAULT_AUCTION_STATE, { merge: true });
 
       await batch.commit();
-      console.log('Firebase Firestore initialized with tournament data.');
+      console.log('Firebase Firestore seeded with sample tournament data.');
     } catch (err) {
-      console.error('Error seeding initial Firestore data:', err);
+      console.error('Error seeding Firestore data:', err);
     }
   }, []);
 
-  // Initialize Firebase and setup Realtime Listeners
+  // Clear ALL data from Firebase Firestore Server
+  const clearAllServerData = useCallback(async () => {
+    try {
+      setSyncStatus('connecting');
+      // Delete players
+      const playerSnap = await getDocs(collection(db, 'players'));
+      const batch1 = writeBatch(db);
+      playerSnap.forEach((docSnap) => {
+        batch1.delete(doc(db, 'players', docSnap.id));
+      });
+      await batch1.commit();
+
+      // Delete teams
+      const teamSnap = await getDocs(collection(db, 'teams'));
+      const batch2 = writeBatch(db);
+      teamSnap.forEach((docSnap) => {
+        batch2.delete(doc(db, 'teams', docSnap.id));
+      });
+      await batch2.commit();
+
+      // Reset auction state
+      await setDoc(doc(db, 'auction_state', 'current'), DEFAULT_AUCTION_STATE);
+
+      setPlayers([]);
+      setTeams([]);
+      setAuctionState(DEFAULT_AUCTION_STATE);
+      setActiveBiddingTeamId('');
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+    } catch (err) {
+      console.error('Error clearing all Firebase data:', err);
+      setSyncStatus('error');
+    }
+  }, []);
+
+  // Initialize Firebase and setup Realtime Listeners directly from server
   useEffect(() => {
     let unsubscribePlayers: (() => void) | null = null;
     let unsubscribeTeams: (() => void) | null = null;
@@ -188,26 +187,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSyncStatus('connecting');
         await initAuth();
 
-        // 1. Check if database needs initial seeding
-        const playersCollection = collection(db, 'players');
-        const existingDocs = await getDocs(playersCollection);
-
-        if (existingDocs.empty) {
-          console.log('Empty Firestore detected. Seeding initial players & teams...');
-          await seedDatabase();
-        }
-
-        // 2. Realtime Listener for Players
+        // 1. Realtime Listener for Players directly from Firebase Firestore
         unsubscribePlayers = onSnapshot(
           collection(db, 'players'),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const loadedPlayers: Player[] = [];
-              snapshot.forEach((docSnap) => {
-                loadedPlayers.push({ id: docSnap.id, ...docSnap.data() } as Player);
-              });
-              setPlayers(loadedPlayers);
-            }
+            const loadedPlayers: Player[] = [];
+            snapshot.forEach((docSnap) => {
+              loadedPlayers.push({ id: docSnap.id, ...docSnap.data() } as Player);
+            });
+            setPlayers(loadedPlayers);
             setIsCloudSynced(true);
             setSyncStatus('synced');
             setLastSyncedAt(new Date());
@@ -218,17 +206,19 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         );
 
-        // 3. Realtime Listener for Teams
+        // 2. Realtime Listener for Teams directly from Firebase Firestore
         unsubscribeTeams = onSnapshot(
           collection(db, 'teams'),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const loadedTeams: Team[] = [];
-              snapshot.forEach((docSnap) => {
-                loadedTeams.push({ id: docSnap.id, ...docSnap.data() } as Team);
-              });
-              setTeams(loadedTeams);
-            }
+            const loadedTeams: Team[] = [];
+            snapshot.forEach((docSnap) => {
+              loadedTeams.push({ id: docSnap.id, ...docSnap.data() } as Team);
+            });
+            setTeams(loadedTeams);
+            setActiveBiddingTeamId(prev => {
+              if (loadedTeams.some(t => t.id === prev)) return prev;
+              return loadedTeams[0]?.id || '';
+            });
             setIsCloudSynced(true);
             setSyncStatus('synced');
             setLastSyncedAt(new Date());
@@ -239,7 +229,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         );
 
-        // 4. Realtime Listener for Live Auction State
+        // 3. Realtime Listener for Live Auction State from Firebase
         unsubscribeAuction = onSnapshot(
           doc(db, 'auction_state', 'current'),
           (docSnap) => {
@@ -247,7 +237,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
               const remoteState = docSnap.data() as AuctionState;
               setAuctionState(remoteState);
             } else {
-              // Create current state doc if it does not exist
               setDoc(doc(db, 'auction_state', 'current'), DEFAULT_AUCTION_STATE, { merge: true });
             }
             setIsCloudSynced(true);
@@ -272,7 +261,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (unsubscribeTeams) unsubscribeTeams();
       if (unsubscribeAuction) unsubscribeAuction();
     };
-  }, [seedDatabase]);
+  }, []);
 
   const activePlayer = players.find(p => p.id === auctionState.activePlayerId) || null;
 
@@ -292,7 +281,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setCurrentTab('team_detail');
   };
 
-  // Mark player SOLD (with Firestore persistence)
+  // Mark player SOLD (Direct Firebase Firestore write)
   const markCurrentPlayerSold = useCallback(async (overrideTeamId?: string, overrideAmount?: number) => {
     const winningTeamId = overrideTeamId || auctionState.highestBidderTeamId;
     const finalPrice = overrideAmount ?? auctionState.currentBid;
@@ -305,7 +294,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const winningTeam = teams.find(t => t.id === winningTeamId);
     if (!winningTeam) return;
 
-    // Trigger sounds and confetti
     sounds.playSoldHammer();
     try {
       confetti({
@@ -356,12 +344,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       recentSoldPlayerId: playerId,
     };
 
-    // Optimistic local update
-    setTeams(prev => prev.map(t => (t.id === winningTeamId ? { ...t, ...updatedTeamData } : t)));
-    setPlayers(prev => prev.map(p => (p.id === playerId ? { ...p, ...updatedPlayerData } : p)));
-    setAuctionState(updatedAuctionState);
-
-    // Firestore atomic batch write
+    // Update Firebase Firestore
     try {
       const batch = writeBatch(db);
       batch.update(doc(db, 'teams', winningTeamId), updatedTeamData);
@@ -373,7 +356,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [auctionState, teams]);
 
-  // Mark player UNSOLD (with Firestore persistence)
+  // Mark player UNSOLD (Direct Firebase Firestore write)
   const markCurrentPlayerUnsold = useCallback(async () => {
     const playerId = auctionState.activePlayerId;
     if (!playerId) return;
@@ -392,11 +375,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timerSeconds: 0,
     };
 
-    // Optimistic local update
-    setPlayers(prev => prev.map(p => (p.id === playerId ? { ...p, ...updatedPlayerData } : p)));
-    setAuctionState(updatedAuctionState);
-
-    // Firestore batch write
     try {
       const batch = writeBatch(db);
       batch.update(doc(db, 'players', playerId), updatedPlayerData);
@@ -415,7 +393,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       interval = setInterval(() => {
         setAuctionState(prev => {
           if (prev.timerSeconds <= 1) {
-            // Time is UP!
             if (prev.highestBidderTeamId && prev.currentBid > 0) {
               setTimeout(() => markCurrentPlayerSold(), 0);
             } else {
@@ -488,9 +465,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         clearTimeout(aiBidTimeoutRef.current);
       }
     };
-  }, [auctionState.isLive, auctionState.isPaused, auctionState.currentBid, auctionState.autoAiBidding, auctionState.phase, auctionState.highestBidderTeamId]);
+  }, [auctionState.isLive, auctionState.isPaused, auctionState.currentBid, auctionState.autoAiBidding, auctionState.phase, auctionState.highestBidderTeamId, players, teams]);
 
-  // Start auction for a player
+  // Start auction for a player (Firestore update)
   const startAuctionForPlayer = async (playerId: string) => {
     const player = players.find(p => p.id === playerId);
     if (!player) return;
@@ -511,8 +488,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       autoAiBidding: auctionState.autoAiBidding,
     };
 
-    setPlayers(prev => prev.map(p => (p.id === playerId ? { ...p, status: 'in_auction' } : p)));
-    setAuctionState(newState);
     setCurrentTab('live_auction');
 
     try {
@@ -525,7 +500,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Place increment bid
+  // Place increment bid (Firestore update)
   const placeBid = async (teamId: string, incrementAmount: number): Promise<{ success: boolean; message: string }> => {
     const team = teams.find(t => t.id === teamId);
     if (!team) {
@@ -581,8 +556,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       bids: [newBidRecord, ...auctionState.bids],
     };
 
-    setAuctionState(updatedState);
-
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updatedState, { merge: true });
     } catch (err) {
@@ -595,7 +568,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
-  // Place custom target bid
+  // Place custom target bid (Firestore update)
   const placeCustomBid = async (teamId: string, targetAmount: number): Promise<{ success: boolean; message: string }> => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return { success: false, message: 'Team not found' };
@@ -640,8 +613,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       bids: [newBidRecord, ...auctionState.bids],
     };
 
-    setAuctionState(updatedState);
-
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updatedState, { merge: true });
     } catch (err) {
@@ -653,7 +624,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const pauseAuction = async () => {
     const updated = { ...auctionState, isPaused: true };
-    setAuctionState(updated);
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updated, { merge: true });
     } catch (err) {
@@ -663,7 +633,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resumeAuction = async () => {
     const updated = { ...auctionState, isPaused: false };
-    setAuctionState(updated);
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updated, { merge: true });
     } catch (err) {
@@ -677,7 +646,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timerSeconds: seconds,
       initialTimerSeconds: seconds,
     };
-    setAuctionState(updated);
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updated, { merge: true });
     } catch (err) {
@@ -687,7 +655,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const toggleAutoAiBidding = async () => {
     const updated = { ...auctionState, autoAiBidding: !auctionState.autoAiBidding };
-    setAuctionState(updated);
     try {
       await setDoc(doc(db, 'auction_state', 'current'), updated, { merge: true });
     } catch (err) {
@@ -710,13 +677,12 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           phase: 'completed',
           activePlayerId: null,
         };
-        setAuctionState(completedState);
         setDoc(doc(db, 'auction_state', 'current'), completedState, { merge: true }).catch(console.error);
       }
     }
   };
 
-  // CRUD Operations with Firestore synchronization
+  // CRUD Operations directly modifying Firebase Server
   const addPlayer = async (newPlayerData: Omit<Player, 'id' | 'bidHistory' | 'status'>) => {
     const newId = `p-${Date.now()}`;
     const newPlayer: Player = {
@@ -725,7 +691,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'available',
       bidHistory: [],
     };
-    setPlayers(prev => [newPlayer, ...prev]);
     try {
       await setDoc(doc(db, 'players', newId), newPlayer);
     } catch (err) {
@@ -734,7 +699,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updatePlayer = async (playerId: string, updatedData: Partial<Player>) => {
-    setPlayers(prev => prev.map(p => (p.id === playerId ? { ...p, ...updatedData } : p)));
     try {
       await updateDoc(doc(db, 'players', playerId), updatedData);
     } catch (err) {
@@ -743,13 +707,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deletePlayer = async (playerId: string) => {
-    setPlayers(prev => prev.filter(p => p.id !== playerId));
-    setTeams(prevTeams =>
-      prevTeams.map(t => ({
-        ...t,
-        squadPlayerIds: t.squadPlayerIds.filter(id => id !== playerId),
-      }))
-    );
     try {
       await deleteDoc(doc(db, 'players', playerId));
     } catch (err) {
@@ -767,7 +724,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       playersBought: 0,
       squadPlayerIds: [],
     };
-    setTeams(prev => [...prev, newTeam]);
     try {
       await setDoc(doc(db, 'teams', newId), newTeam);
     } catch (err) {
@@ -776,7 +732,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateTeam = async (teamId: string, updatedData: Partial<Team>) => {
-    setTeams(prev => prev.map(t => (t.id === teamId ? { ...t, ...updatedData } : t)));
     try {
       await updateDoc(doc(db, 'teams', teamId), updatedData);
     } catch (err) {
@@ -785,7 +740,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteTeam = async (teamId: string) => {
-    setTeams(prev => prev.filter(t => t.id !== teamId));
     try {
       await deleteDoc(doc(db, 'teams', teamId));
     } catch (err) {
@@ -794,16 +748,32 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const resetEntireAuction = async () => {
-    setPlayers(INITIAL_PLAYERS);
-    setTeams(INITIAL_TEAMS);
-    setAuctionState(DEFAULT_AUCTION_STATE);
-
-    localStorage.removeItem(STORAGE_KEY_PLAYERS);
-    localStorage.removeItem(STORAGE_KEY_TEAMS);
-    localStorage.removeItem(STORAGE_KEY_AUCTION);
-
     try {
-      await seedDatabase();
+      // Reset all player statuses to 'available' on server
+      const batch = writeBatch(db);
+      players.forEach(p => {
+        batch.update(doc(db, 'players', p.id), {
+          status: 'available',
+          soldToTeamId: undefined,
+          soldToTeamName: undefined,
+          soldPrice: undefined,
+          bidHistory: [],
+        });
+      });
+
+      // Reset team budgets and squads on server
+      teams.forEach(t => {
+        batch.update(doc(db, 'teams', t.id), {
+          totalSpent: 0,
+          remainingBudget: t.startingBudget,
+          playersBought: 0,
+          squadPlayerIds: [],
+        });
+      });
+
+      // Reset auction state on server
+      batch.set(doc(db, 'auction_state', 'current'), DEFAULT_AUCTION_STATE, { merge: true });
+      await batch.commit();
     } catch (err) {
       console.error('Firestore error during full reset:', err);
     }
@@ -888,6 +858,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateTeam,
         deleteTeam,
         resetEntireAuction,
+        clearAllServerData,
         reseedDatabase: seedDatabase,
         stats,
       }}

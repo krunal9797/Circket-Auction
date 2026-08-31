@@ -191,17 +191,39 @@ export const PlayerDatabase: React.FC = () => {
 
         {filteredPlayers.length === 0 ? (
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
-            <p className="text-lg font-bold text-white">No players found matching your criteria</p>
-            <p className="text-xs text-slate-400">Try adjusting your search query or reset filter pills.</p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setActiveFilter('All');
-              }}
-              className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-semibold text-amber-400"
-            >
-              Clear Filters
-            </button>
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto text-2xl">
+              🏏
+            </div>
+            <p className="text-lg font-bold text-white">
+              {players.length === 0 ? 'No Players on Firebase Cloud Database' : 'No players found matching your criteria'}
+            </p>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              {players.length === 0
+                ? 'Your tournament roster is currently empty. Click below to add new players or import via CSV.'
+                : 'Try adjusting your search query or reset filter pills.'}
+            </p>
+            {players.length === 0 ? (
+              <button
+                onClick={() => {
+                  setUserRole('admin');
+                  setCurrentTab('admin');
+                }}
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition inline-flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Players in Admin</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveFilter('All');
+                }}
+                className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-semibold text-amber-400"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

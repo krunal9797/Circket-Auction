@@ -1,6 +1,6 @@
 {
-  "name": "Cricket Auction Pro",
-  "description": "Premium IPL-style cricket player live auction platform with dynamic bidding, team budget tracking, leaderboards, and auctioneer control room.",
+  "name": "Cricket Auction Pro - KPL",
+  "description": "Cricket Auction Pro for KPL (Katasvan Premier League). Built by Er. Krunal Gamit. Real-time cricket player live auction platform with dynamic bidding, team budget tracking, leaderboards, and auctioneer control room.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

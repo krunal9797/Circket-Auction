@@ -57,9 +57,15 @@ export const HomePage: React.FC = () => {
           {/* Hero Left Content */}
           <div className="lg:col-span-7 space-y-6">
             {/* Live Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-widest">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              <span>Official Mega IPL Style Bidding Platform</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-widest">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <span>KPL • KATASVAN PREMIER LEAGUE 2026</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-semibold">
+                <span className="text-amber-400 font-bold">Er. Krunal Gamit</span>
+                <span className="text-[10px] text-slate-400">(Creator & Lead Architect)</span>
+              </div>
             </div>
 
             {/* Main Title & Slogan */}
@@ -129,7 +135,7 @@ export const HomePage: React.FC = () => {
                   {/* Floating Badges */}
                   <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md border border-amber-500/40 px-3 py-1 rounded-full text-[11px] font-bold text-amber-400 flex items-center gap-1.5 shadow-lg">
                     <span>🏏</span>
-                    <span>IPL Broadcast Room</span>
+                    <span>KPL War Room</span>
                   </div>
 
                   <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
@@ -274,114 +280,132 @@ export const HomePage: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {featuredPlayers.map((player) => {
-            const isSold = player.status === 'sold';
-            const isInAuction = player.status === 'in_auction';
+        {featuredPlayers.length === 0 ? (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto text-2xl">
+              ⚡
+            </div>
+            <h3 className="text-lg font-bold text-white">No Players in Firebase Database</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Add your auction players from the Admin Panel or import a roster to begin live bidding.
+            </p>
+            <button
+              onClick={() => setCurrentTab('admin')}
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition inline-flex items-center gap-2"
+            >
+              <span>Go to Admin Panel</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {featuredPlayers.map((player) => {
+              const isSold = player.status === 'sold';
+              const isInAuction = player.status === 'in_auction';
 
-            return (
-              <div
-                key={player.id}
-                className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all group flex flex-col justify-between shadow-xl"
-              >
-                <div>
-                  {/* Photo & Tag */}
-                  <div className="relative h-56 overflow-hidden bg-slate-950">
-                    <img
-                      src={player.image}
-                      alt={player.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-95"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+              return (
+                <div
+                  key={player.id}
+                  className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all group flex flex-col justify-between shadow-xl"
+                >
+                  <div>
+                    {/* Photo & Tag */}
+                    <div className="relative h-56 overflow-hidden bg-slate-950">
+                      <img
+                        src={player.image}
+                        alt={player.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-95"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
-                    {/* Role Pill */}
-                    <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-amber-400 border border-amber-500/30">
-                      {player.role}
+                      {/* Role Pill */}
+                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-amber-400 border border-amber-500/30">
+                        {player.role}
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="absolute top-3 right-3">
+                        {isSold ? (
+                          <span className="bg-emerald-500 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow uppercase">
+                            SOLD • {formatINR(player.soldPrice)}
+                          </span>
+                        ) : isInAuction ? (
+                          <span className="bg-red-500 text-white font-black text-[10px] px-2.5 py-1 rounded-full shadow animate-pulse uppercase">
+                            ON THE HAMMER
+                          </span>
+                        ) : (
+                          <span className="bg-blue-600/80 backdrop-blur-md text-white font-bold text-[10px] px-2 py-0.5 rounded-full border border-blue-400/40">
+                            AVAILABLE
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Player Name Overlay */}
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <span className="text-[11px] text-slate-300 font-medium">{player.city} • Age {player.age}</span>
+                        <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
+                          {player.name}
+                        </h3>
+                      </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className="absolute top-3 right-3">
-                      {isSold ? (
-                        <span className="bg-emerald-500 text-black font-black text-[10px] px-2.5 py-1 rounded-full shadow uppercase">
-                          SOLD • {formatINR(player.soldPrice)}
-                        </span>
-                      ) : isInAuction ? (
-                        <span className="bg-red-500 text-white font-black text-[10px] px-2.5 py-1 rounded-full shadow animate-pulse uppercase">
-                          ON THE HAMMER
-                        </span>
-                      ) : (
-                        <span className="bg-blue-600/80 backdrop-blur-md text-white font-bold text-[10px] px-2 py-0.5 rounded-full border border-blue-400/40">
-                          AVAILABLE
-                        </span>
-                      )}
-                    </div>
+                    {/* Player Key Metrics */}
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-3 gap-1.5 text-center bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Matches</span>
+                          <strong className="text-white font-semibold">{player.stats.matches}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Runs/Wkt</span>
+                          <strong className="text-amber-400 font-semibold">
+                            {player.role === 'Bowler' ? `${player.stats.wickets} W` : player.stats.runs}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Strike Rate</span>
+                          <strong className="text-emerald-400 font-semibold">{player.stats.strikeRate}</strong>
+                        </div>
+                      </div>
 
-                    {/* Player Name Overlay */}
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <span className="text-[11px] text-slate-300 font-medium">{player.city} • Age {player.age}</span>
-                      <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
-                        {player.name}
-                      </h3>
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-slate-400">Base Price:</span>
+                        <span className="text-amber-400 font-bold font-digital text-sm">
+                          {formatINR(player.basePrice)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Player Key Metrics */}
-                  <div className="p-4 space-y-3">
-                    <div className="grid grid-cols-3 gap-1.5 text-center bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Matches</span>
-                        <strong className="text-white font-semibold">{player.stats.matches}</strong>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Runs/Wkt</span>
-                        <strong className="text-amber-400 font-semibold">
-                          {player.role === 'Bowler' ? `${player.stats.wickets} W` : player.stats.runs}
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">Strike Rate</span>
-                        <strong className="text-emerald-400 font-semibold">{player.stats.strikeRate}</strong>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-slate-400">Base Price:</span>
-                      <span className="text-amber-400 font-bold font-digital text-sm">
-                        {formatINR(player.basePrice)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Action */}
-                <div className="p-4 pt-0 grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => viewPlayerDetails(player.id)}
-                    className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
-                  >
-                    Profile
-                  </button>
-                  {isSold ? (
+                  {/* Card Action */}
+                  <div className="p-4 pt-0 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => viewPlayerDetails(player.id)}
-                      className="w-full py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold"
+                      className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
                     >
-                      {player.soldToTeamName}
+                      Profile
                     </button>
-                  ) : (
-                    <button
-                      onClick={() => startAuctionForPlayer(player.id)}
-                      className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition flex items-center justify-center gap-1"
-                    >
-                      <Gavel className="w-3.5 h-3.5" />
-                      <span>BID NOW</span>
-                    </button>
-                  )}
+                    {isSold ? (
+                      <button
+                        onClick={() => viewPlayerDetails(player.id)}
+                        className="w-full py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold"
+                      >
+                        {player.soldToTeamName}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startAuctionForPlayer(player.id)}
+                        className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition flex items-center justify-center gap-1"
+                      >
+                        <Gavel className="w-3.5 h-3.5" />
+                        <span>BID NOW</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* PARTICIPATING FRANCHISES MARQUEE */}

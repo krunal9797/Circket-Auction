@@ -70,16 +70,19 @@ export const Navbar: React.FC = () => {
       <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-black py-1 px-4 text-xs font-bold tracking-wider flex items-center justify-between overflow-hidden">
         <div className="flex items-center gap-2 shrink-0">
           <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping" />
-          <span className="font-sports text-sm tracking-wide uppercase">IPL STYLE MEGA CRICKET AUCTION 2026</span>
+          <span className="font-sports text-sm tracking-wide uppercase">KPL • KATASVAN PREMIER LEAGUE 2026</span>
+          <span className="hidden sm:inline bg-black/80 text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full ml-1">
+            Built by Er. Krunal Gamit
+          </span>
         </div>
         <div className="hidden md:flex items-center gap-6 text-[11px] font-semibold tracking-normal">
-          <span>Starting Budget: <strong className="font-bold">₹1,00,000 / Team</strong></span>
+          <span>Starting Purse: <strong className="font-bold">₹1,00,000 / Team</strong></span>
           <span>•</span>
-          <span>Sold Players: <strong className="font-bold">{stats.playersSold}</strong></span>
+          <span>Sold: <strong className="font-bold">{stats.playersSold}</strong></span>
           <span>•</span>
-          <span>Total Spent: <strong className="font-bold">{formatINR(stats.totalAuctionValue)}</strong></span>
+          <span>Spent: <strong className="font-bold">{formatINR(stats.totalAuctionValue)}</strong></span>
           <span>•</span>
-          <span>Purse Left: <strong className="font-bold">{formatINR((stats.totalTeams * 100000) - stats.totalAuctionValue)}</strong></span>
+          <span className="font-bold text-slate-900">Developer: Er. Krunal Gamit</span>
         </div>
         <div className="flex items-center gap-2">
           {auctionState.isLive && (
@@ -114,9 +117,12 @@ export const Navbar: React.FC = () => {
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] text-amber-400/80 -mt-1 tracking-widest uppercase font-semibold">
-                Bid • Build • Conquer
-              </p>
+              <div className="flex items-center gap-1.5 -mt-1">
+                <span className="text-[10px] text-amber-400 font-bold tracking-wide uppercase">
+                  KPL Katasvan
+                </span>
+                <span className="text-[9px] text-slate-400">• By Er. Krunal Gamit</span>
+              </div>
             </div>
           </button>
 

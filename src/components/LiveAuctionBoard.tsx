@@ -50,7 +50,7 @@ export const LiveAuctionBoard: React.FC = () => {
             <span>LIVE BROADCAST FEED</span>
           </div>
           <span className="text-sm font-bold text-slate-200 font-sports text-xl tracking-wider uppercase">
-            IPL MEGA AUCTION ARENA • OFFICIAL WAR ROOM
+            KPL MEGA AUCTION ARENA • KATASVAN PREMIER LEAGUE
           </span>
         </div>
 
