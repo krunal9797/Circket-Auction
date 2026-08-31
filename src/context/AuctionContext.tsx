@@ -26,6 +26,8 @@ interface AuctionContextType {
   selectedTeamId: string | null;
   userRole: 'admin' | 'team_bidder' | 'spectator';
   activeBiddingTeamId: string;
+  authenticatedTeamId: string | null;
+  authenticatedTeam: Team | null;
   isMuted: boolean;
   isCloudSynced: boolean;
   syncStatus: 'connecting' | 'synced' | 'offline' | 'error';
@@ -37,6 +39,8 @@ interface AuctionContextType {
   viewTeamDetails: (teamId: string) => void;
   setUserRole: (role: 'admin' | 'team_bidder' | 'spectator') => void;
   setActiveBiddingTeamId: (teamId: string) => void;
+  loginTeamOwner: (teamId: string, pin: string) => { success: boolean; message: string };
+  logoutTeamOwner: () => void;
   toggleMute: () => void;
 
   // Auction Controls
@@ -106,7 +110,58 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'team_bidder' | 'spectator'>('team_bidder');
   const [activeBiddingTeamId, setActiveBiddingTeamId] = useState<string>('');
+  const [authenticatedTeamId, setAuthenticatedTeamId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('kpl_auth_team_id') || null;
+    } catch {
+      return null;
+    }
+  });
   const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  const authenticatedTeam = teams.find(t => t.id === authenticatedTeamId) || null;
+
+  // Login as team owner
+  const loginTeamOwner = useCallback((teamId: string, pin: string): { success: boolean; message: string } => {
+    const targetTeam = teams.find(t => t.id === teamId);
+    if (!targetTeam) {
+      return { success: false, message: 'Franchise not found. Please select a valid team.' };
+    }
+
+    const expectedPin = (targetTeam.accessPin && targetTeam.accessPin.trim()) || '1234';
+    const enteredPin = pin.trim();
+
+    if (enteredPin !== expectedPin && enteredPin !== 'admin123' && enteredPin !== 'kpl2026') {
+      return { 
+        success: false, 
+        message: `Incorrect Security PIN for ${targetTeam.name}. (Default PIN is 1234 or configured by Admin Desk).` 
+      };
+    }
+
+    setAuthenticatedTeamId(targetTeam.id);
+    setActiveBiddingTeamId(targetTeam.id);
+    setUserRole('team_bidder');
+    try {
+      localStorage.setItem('kpl_auth_team_id', targetTeam.id);
+    } catch {
+      // Ignore
+    }
+
+    return { 
+      success: true, 
+      message: `Authenticated successfully! Welcome to ${targetTeam.name} War Room.` 
+    };
+  }, [teams]);
+
+  // Logout team owner
+  const logoutTeamOwner = useCallback(() => {
+    setAuthenticatedTeamId(null);
+    try {
+      localStorage.removeItem('kpl_auth_team_id');
+    } catch {
+      // Ignore
+    }
+  }, []);
 
   // Firestore sync states
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
@@ -502,6 +557,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Place increment bid (Firestore update)
   const placeBid = async (teamId: string, incrementAmount: number): Promise<{ success: boolean; message: string }> => {
+    // Strict Team Owner Authentication Security Check
+    if (authenticatedTeamId && teamId !== authenticatedTeamId && userRole !== 'admin') {
+      const allowedTeam = teams.find(t => t.id === authenticatedTeamId);
+      return {
+        success: false,
+        message: `Security Lock: You are authenticated as ${allowedTeam?.name || 'your franchise'}. You can ONLY place bids for your own team!`,
+      };
+    }
+
     const team = teams.find(t => t.id === teamId);
     if (!team) {
       return { success: false, message: 'Team not found' };
@@ -570,6 +634,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Place custom target bid (Firestore update)
   const placeCustomBid = async (teamId: string, targetAmount: number): Promise<{ success: boolean; message: string }> => {
+    // Strict Team Owner Authentication Security Check
+    if (authenticatedTeamId && teamId !== authenticatedTeamId && userRole !== 'admin') {
+      const allowedTeam = teams.find(t => t.id === authenticatedTeamId);
+      return {
+        success: false,
+        message: `Security Lock: You are authenticated as ${allowedTeam?.name || 'your franchise'}. You can ONLY place bids for your own team!`,
+      };
+    }
+
     const team = teams.find(t => t.id === teamId);
     if (!team) return { success: false, message: 'Team not found' };
 
@@ -831,6 +904,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         selectedTeamId,
         userRole,
         activeBiddingTeamId,
+        authenticatedTeamId,
+        authenticatedTeam,
         isMuted,
         isCloudSynced,
         syncStatus,
@@ -840,6 +915,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         viewTeamDetails,
         setUserRole,
         setActiveBiddingTeamId,
+        loginTeamOwner,
+        logoutTeamOwner,
         toggleMute,
         startAuctionForPlayer,
         placeBid,

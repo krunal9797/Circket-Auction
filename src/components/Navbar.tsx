@@ -17,7 +17,10 @@ import {
   Cloud,
   CloudCheck,
   CloudOff,
-  RefreshCw
+  RefreshCw,
+  Lock,
+  KeyRound,
+  UserCheck
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { ViewTab } from '../types';
@@ -33,6 +36,9 @@ export const Navbar: React.FC = () => {
     teams, 
     activeBiddingTeamId, 
     setActiveBiddingTeamId,
+    authenticatedTeamId,
+    authenticatedTeam,
+    logoutTeamOwner,
     isMuted,
     toggleMute,
     stats,
@@ -41,7 +47,7 @@ export const Navbar: React.FC = () => {
   } = useAuction();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const activeTeam = teams.find(t => t.id === activeBiddingTeamId) || teams[0];
+  const activeTeam = teams.find(t => t.id === (authenticatedTeamId || activeBiddingTeamId)) || teams[0];
 
   const navItems: { id: ViewTab; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     { id: 'home', label: 'Home', icon: <Sparkles className="w-4 h-4" /> },
@@ -52,6 +58,12 @@ export const Navbar: React.FC = () => {
       badge: auctionState.isLive ? 'LIVE' : undefined
     },
     { id: 'auction_board', label: 'Broadcast Board', icon: <Layers className="w-4 h-4" /> },
+    { 
+      id: 'team_portal', 
+      label: authenticatedTeam ? `${authenticatedTeam.shortCode} War Room` : 'Team Portal', 
+      icon: <KeyRound className="w-4 h-4 text-amber-400" />,
+      badge: authenticatedTeam ? 'AUTH' : undefined
+    },
     { id: 'players', label: 'Players', icon: <Users className="w-4 h-4" />, badge: stats.playersAvailable },
     { id: 'teams', label: 'Teams', icon: <ShieldCheck className="w-4 h-4" />, badge: stats.totalTeams },
     { id: 'results', label: 'Results', icon: <PieChart className="w-4 h-4" />, badge: stats.playersSold },
@@ -198,25 +210,42 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Bidding Team Selector */}
-            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-inner">
-              <span className="text-[11px] text-slate-400 mr-2 flex items-center gap-1">
-                <Wallet className="w-3.5 h-3.5 text-amber-400" />
-                Team:
-              </span>
-              <select
-                id="header-team-selector"
-                value={activeBiddingTeamId}
-                onChange={(e) => setActiveBiddingTeamId(e.target.value)}
-                className="bg-transparent text-xs font-bold text-amber-400 focus:outline-none cursor-pointer pr-1"
+            {/* Bidding Team Selector / Authenticated Franchise Lock */}
+            {authenticatedTeam ? (
+              <div 
+                onClick={() => handleTabClick('team_portal')}
+                className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/50 hover:bg-amber-500/25 rounded-xl px-3 py-1.5 cursor-pointer shadow-sm shadow-amber-500/20 transition group"
+                title={`Authenticated War Room: ${authenticatedTeam.name}. Click to view War Room.`}
               >
-                {teams.map(t => (
-                  <option key={t.id} value={t.id} className="bg-slate-900 text-slate-200">
-                    {t.name} ({formatINR(t.remainingBudget)})
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-sports font-bold text-white group-hover:text-amber-400">
+                  {authenticatedTeam.shortCode}
+                </span>
+                <span className="font-digital text-xs text-amber-400 font-bold">
+                  {formatINR(authenticatedTeam.remainingBudget)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-inner">
+                <span className="text-[11px] text-slate-400 mr-2 flex items-center gap-1">
+                  <Wallet className="w-3.5 h-3.5 text-amber-400" />
+                  Team:
+                </span>
+                <select
+                  id="header-team-selector"
+                  value={activeBiddingTeamId}
+                  onChange={(e) => setActiveBiddingTeamId(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-amber-400 focus:outline-none cursor-pointer pr-1"
+                >
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id} className="bg-slate-900 text-slate-200">
+                      {t.name} ({formatINR(t.remainingBudget)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Mute Toggle */}
             <button

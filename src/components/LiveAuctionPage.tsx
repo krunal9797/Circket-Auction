@@ -13,11 +13,13 @@ import {
   XCircle, 
   Sparkles, 
   Flame, 
-  ArrowRight,
-  Bot,
-  Volume2,
-  VolumeX,
-  AlertCircle
+  ArrowRight, 
+  Bot, 
+  Volume2, 
+  VolumeX, 
+  AlertCircle,
+  Lock,
+  KeyRound
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { formatINR, formatTimer } from '../utils/formatters';
@@ -30,6 +32,8 @@ export const LiveAuctionPage: React.FC = () => {
     activePlayer,
     activeBiddingTeamId,
     setActiveBiddingTeamId,
+    authenticatedTeamId,
+    authenticatedTeam,
     placeBid,
     placeCustomBid,
     pauseAuction,
@@ -47,7 +51,8 @@ export const LiveAuctionPage: React.FC = () => {
   const [customBidAmount, setCustomBidAmount] = useState<string>('');
   const [bidNotification, setBidNotification] = useState<{ text: string; isError: boolean } | null>(null);
 
-  const activeTeam = teams.find(t => t.id === activeBiddingTeamId) || teams[0];
+  const effectiveBiddingTeamId = authenticatedTeamId || activeBiddingTeamId;
+  const activeTeam = teams.find(t => t.id === effectiveBiddingTeamId) || teams[0];
   const highestBidderTeam = teams.find(t => t.id === auctionState.highestBidderTeamId);
 
   const availablePlayers = players.filter(p => p.status === 'available');
@@ -59,20 +64,20 @@ export const LiveAuctionPage: React.FC = () => {
     }, 4000);
   };
 
-  const handleIncrementBid = (increment: number) => {
+  const handleIncrementBid = async (increment: number) => {
     if (!activePlayer) return;
-    const res = placeBid(activeBiddingTeamId, increment);
+    const res = await placeBid(effectiveBiddingTeamId, increment);
     showNotification(res.message, !res.success);
   };
 
-  const handleCustomBidSubmit = (e: React.FormEvent) => {
+  const handleCustomBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = parseInt(customBidAmount.replace(/\D/g, ''), 10);
     if (isNaN(parsed) || parsed <= 0) {
       showNotification('Please enter a valid bid amount', true);
       return;
     }
-    const res = placeCustomBid(activeBiddingTeamId, parsed);
+    const res = await placeCustomBid(effectiveBiddingTeamId, parsed);
     showNotification(res.message, !res.success);
     if (res.success) {
       setCustomBidAmount('');
@@ -454,30 +459,73 @@ export const LiveAuctionPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* ACTIVE BIDDER TEAM SELECTOR */}
-              <div className="space-y-2 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    Place Bid As:
-                  </span>
-                  <span className="text-slate-400">
-                    Remaining Purse: <strong className="text-amber-400 font-digital">{formatINR(activeTeam.remainingBudget)}</strong>
-                  </span>
+              {/* ACTIVE BIDDER TEAM SELECTOR / AUTHENTICATED FRANCHISE LOCK */}
+              {authenticatedTeam ? (
+                <div className="bg-amber-500/10 border-2 border-amber-500/50 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5" />
+                      AUTHENTICATED WAR ROOM LOCK
+                    </span>
+                    <button
+                      onClick={() => setCurrentTab('team_portal')}
+                      className="text-[11px] text-amber-400 hover:underline font-bold"
+                    >
+                      Open War Room ↗
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 bg-slate-950/80 p-2.5 rounded-xl border border-amber-500/20">
+                    <span className="text-2xl">{authenticatedTeam.logo || '🏏'}</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-sports font-bold text-white text-base truncate">{authenticatedTeam.name}</h4>
+                      <p className="text-[11px] text-slate-400 truncate">Owner: {authenticatedTeam.owner}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Remaining Purse</span>
+                      <span className="font-digital text-amber-400 font-bold text-sm">
+                        {formatINR(authenticatedTeam.remainingBudget)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    🔒 All bids placed from this console are strictly submitted on behalf of <strong>{authenticatedTeam.name}</strong>.
+                  </p>
                 </div>
-                <select
-                  id="live-auction-team-selector"
-                  value={activeBiddingTeamId}
-                  onChange={(e) => setActiveBiddingTeamId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 text-white font-bold text-sm rounded-xl p-3 focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  {teams.map(t => (
-                    <option key={t.id} value={t.id} className="bg-slate-900 text-white">
-                      {t.name} • Purse: {formatINR(t.remainingBudget)} • Players: {t.playersBought}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              ) : (
+                <div className="space-y-2 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      Place Bid As:
+                    </span>
+                    <span className="text-slate-400">
+                      Remaining Purse: <strong className="text-amber-400 font-digital">{formatINR(activeTeam.remainingBudget)}</strong>
+                    </span>
+                  </div>
+                  <select
+                    id="live-auction-team-selector"
+                    value={activeBiddingTeamId}
+                    onChange={(e) => setActiveBiddingTeamId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 text-white font-bold text-sm rounded-xl p-3 focus:outline-none focus:border-amber-500 cursor-pointer"
+                  >
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                        {t.name} • Purse: {formatINR(t.remainingBudget)} • Players: {t.playersBought}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Franchise Owner?</span>
+                    <button
+                      onClick={() => setCurrentTab('team_portal')}
+                      className="text-amber-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      <span>Login to Team War Room</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* QUICK BID INCREMENT BUTTONS */}
               {auctionState.phase === 'bidding' ? (

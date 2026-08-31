@@ -21,7 +21,10 @@ import {
   Eye,
   Cloud,
   RefreshCw,
-  Database
+  Database,
+  Copy,
+  Check,
+  KeyRound
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { Player, Team, PlayerRole, BattingStyle, BowlingStyle } from '../types';
@@ -96,6 +99,7 @@ export const AdminPanel: React.FC = () => {
 
   // Team Form State
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [copiedTeamId, setCopiedTeamId] = useState<string | null>(null);
   const [teamForm, setTeamForm] = useState({
     name: '',
     shortCode: 'NEW',
@@ -103,6 +107,9 @@ export const AdminPanel: React.FC = () => {
     color: '#F59E0B',
     owner: '',
     captain: '',
+    accessPin: '1234',
+    ownerEmail: '',
+    ownerPhone: '',
     startingBudget: 100000,
   });
 
@@ -209,6 +216,9 @@ export const AdminPanel: React.FC = () => {
         color: teamForm.color,
         owner: teamForm.owner,
         captain: teamForm.captain,
+        accessPin: teamForm.accessPin || '1234',
+        ownerEmail: teamForm.ownerEmail,
+        ownerPhone: teamForm.ownerPhone,
         startingBudget: Number(teamForm.startingBudget),
       });
       setEditingTeamId(null);
@@ -220,10 +230,25 @@ export const AdminPanel: React.FC = () => {
         color: teamForm.color,
         owner: teamForm.owner || 'Franchise Group',
         captain: teamForm.captain || 'Lead Player',
+        accessPin: teamForm.accessPin || '1234',
+        ownerEmail: teamForm.ownerEmail,
+        ownerPhone: teamForm.ownerPhone,
         startingBudget: Number(teamForm.startingBudget) || 100000,
       });
     }
 
+    setTeamForm({
+      name: '',
+      shortCode: 'NEW',
+      logo: '🏏',
+      color: '#F59E0B',
+      owner: '',
+      captain: '',
+      accessPin: '1234',
+      ownerEmail: '',
+      ownerPhone: '',
+      startingBudget: 100000,
+    });
     setAdminTab('teams');
   };
 
@@ -993,7 +1018,7 @@ export const AdminPanel: React.FC = () => {
               {editingTeamId ? 'EDIT FRANCHISE' : 'CREATE NEW FRANCHISE'}
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1">Team Name *</label>
                 <input
@@ -1001,8 +1026,8 @@ export const AdminPanel: React.FC = () => {
                   required
                   value={teamForm.name}
                   onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
-                  placeholder="e.g. Team Titans"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                  placeholder="e.g. Katasvan Titans"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -1018,12 +1043,22 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div>
+                <label className="text-xs text-slate-300 font-bold block mb-1">Starting Budget (₹)</label>
+                <input
+                  type="number"
+                  value={teamForm.startingBudget}
+                  onChange={(e) => setTeamForm({ ...teamForm, startingBudget: Number(e.target.value) })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-amber-400 font-digital font-bold"
+                />
+              </div>
+
+              <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1">Owner Name</label>
                 <input
                   type="text"
                   value={teamForm.owner}
                   onChange={(e) => setTeamForm({ ...teamForm, owner: e.target.value })}
-                  placeholder="e.g. Adani Sports"
+                  placeholder="e.g. Ramesh Patel"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
                 />
               </div>
@@ -1034,8 +1069,23 @@ export const AdminPanel: React.FC = () => {
                   type="text"
                   value={teamForm.captain}
                   onChange={(e) => setTeamForm({ ...teamForm, captain: e.target.value })}
-                  placeholder="e.g. Hardik Pandya"
+                  placeholder="e.g. Rohit Gamit"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-amber-400 font-bold flex items-center gap-1 mb-1">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Franchise Secret Access PIN *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={teamForm.accessPin}
+                  onChange={(e) => setTeamForm({ ...teamForm, accessPin: e.target.value })}
+                  placeholder="e.g. 1234, 7788"
+                  className="w-full bg-slate-950 border border-amber-500/50 rounded-xl p-3 text-sm text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
@@ -1046,7 +1096,7 @@ export const AdminPanel: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setEditingTeamId(null);
-                    setTeamForm({ name: '', shortCode: 'NEW', logo: '🏏', color: '#F59E0B', owner: '', captain: '', startingBudget: 100000 });
+                    setTeamForm({ name: '', shortCode: 'NEW', logo: '🏏', color: '#F59E0B', owner: '', captain: '', accessPin: '1234', ownerEmail: '', ownerPhone: '', startingBudget: 100000 });
                   }}
                   className="px-4 py-2 bg-slate-800 text-xs font-bold text-slate-300 rounded-xl"
                 >
@@ -1064,9 +1114,12 @@ export const AdminPanel: React.FC = () => {
 
           {/* Teams Table */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-            <h4 className="font-sports text-2xl font-bold text-white uppercase">
-              REGISTERED FRANCHISES
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-sports text-2xl font-bold text-white uppercase">
+                REGISTERED FRANCHISES
+              </h4>
+              <span className="text-xs text-slate-400">Total {teams.length} Teams</span>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1074,6 +1127,7 @@ export const AdminPanel: React.FC = () => {
                   <tr>
                     <th className="py-3 px-4">Team</th>
                     <th className="py-3 px-4">Owner & Captain</th>
+                    <th className="py-3 px-4">Secret Access PIN</th>
                     <th className="py-3 px-4">Starting Budget</th>
                     <th className="py-3 px-4">Spent</th>
                     <th className="py-3 px-4">Remaining</th>
@@ -1094,6 +1148,29 @@ export const AdminPanel: React.FC = () => {
                         <div>Own: {t.owner}</div>
                         <div className="text-slate-400">Cap: {t.captain}</div>
                       </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-bold text-xs">
+                            {t.accessPin || '1234'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`Team: ${t.name}\nPIN: ${t.accessPin || '1234'}`);
+                              setCopiedTeamId(t.id);
+                              setTimeout(() => setCopiedTeamId(null), 2500);
+                            }}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 transition"
+                            title="Copy Team Credentials"
+                          >
+                            {copiedTeamId === t.id ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                       <td className="py-3 px-4 font-digital font-bold text-slate-300">{formatINR(t.startingBudget)}</td>
                       <td className="py-3 px-4 font-digital font-bold text-red-400">{formatINR(t.totalSpent)}</td>
                       <td className="py-3 px-4 font-digital font-extrabold text-amber-400">{formatINR(t.remainingBudget)}</td>
@@ -1109,6 +1186,9 @@ export const AdminPanel: React.FC = () => {
                                 color: t.color,
                                 owner: t.owner,
                                 captain: t.captain,
+                                accessPin: t.accessPin || '1234',
+                                ownerEmail: t.ownerEmail || '',
+                                ownerPhone: t.ownerPhone || '',
                                 startingBudget: t.startingBudget,
                               });
                             }}

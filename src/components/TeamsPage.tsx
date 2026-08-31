@@ -134,16 +134,16 @@ export const TeamsPage: React.FC = () => {
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActiveBiddingTeamId(team.id);
-                      setCurrentTab('live_auction');
+                      setCurrentTab('team_portal');
                     }}
-                    className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
+                    className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 transition"
+                    title="Franchise Owner War Room Login"
                   >
-                    <span>Bid as Team</span>
+                    <span>🔐 War Room</span>
                   </button>
                   
                   <span className="text-xs text-slate-400 group-hover:text-white font-medium flex items-center gap-1">

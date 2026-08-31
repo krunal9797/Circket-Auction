@@ -69,6 +69,9 @@ export interface Team {
   color: string;
   owner: string;
   captain: string;
+  accessPin?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
   startingBudget: number;
   totalSpent: number;
   remainingBudget: number;
@@ -98,8 +101,10 @@ export type ViewTab =
   | 'home' 
   | 'live_auction' 
   | 'auction_board' 
+  | 'team_portal'
   | 'players' 
   | 'player_detail' 
+  | 'player_profile'
   | 'teams' 
   | 'team_detail' 
   | 'results' 
