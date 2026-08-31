@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { formatINR } from '../utils/formatters';
+import { SponsorSlideshow } from './SponsorSlideshow';
 
 export const HomePage: React.FC = () => {
   const { 
@@ -446,6 +447,28 @@ export const HomePage: React.FC = () => {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* OFFICIAL TOURNAMENT SPONSORS CAROUSEL */}
+      <section className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-5">
+        <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-6 h-6 text-amber-400" />
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white font-sports tracking-wider uppercase">
+                OFFICIAL TOURNAMENT SPONSORS & PARTNERS
+              </h3>
+              <p className="text-xs text-slate-400">
+                Powering Katasvan Premier League 2026 Season
+              </p>
+            </div>
+          </div>
+          <span className="text-xs text-amber-400 font-bold bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full">
+            ★ Title & Powered By Partners
+          </span>
+        </div>
+
+        <SponsorSlideshow variant="broadcast" autoPlayInterval={4500} />
       </section>
 
       {/* RULES / BROADCAST SYSTEM INFO */}

@@ -27,13 +27,15 @@ import {
   KeyRound
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
-import { Player, Team, PlayerRole, BattingStyle, BowlingStyle } from '../types';
+import { Player, Team, PlayerRole, BattingStyle, BowlingStyle, Sponsor, SponsorTier } from '../types';
 import { formatINR } from '../utils/formatters';
+import { SponsorSlideshow } from './SponsorSlideshow';
 
 export const AdminPanel: React.FC = () => {
   const {
     players,
     teams,
+    sponsors,
     auctionState,
     activePlayer,
     stats,
@@ -49,6 +51,10 @@ export const AdminPanel: React.FC = () => {
     addTeam,
     updateTeam,
     deleteTeam,
+    addSponsor,
+    updateSponsor,
+    deleteSponsor,
+    reseedSponsors,
     resetEntireAuction,
     clearAllServerData,
     reseedDatabase,
@@ -68,7 +74,7 @@ export const AdminPanel: React.FC = () => {
   const [authError, setAuthError] = useState<string>('');
 
   // Active Admin Sub-tab
-  const [adminTab, setAdminTab] = useState<'control_room' | 'players' | 'teams' | 'add_player' | 'add_team'>('control_room');
+  const [adminTab, setAdminTab] = useState<'control_room' | 'players' | 'teams' | 'sponsors' | 'add_player' | 'add_team'>('control_room');
 
   // Player Form State
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
@@ -111,6 +117,28 @@ export const AdminPanel: React.FC = () => {
     ownerEmail: '',
     ownerPhone: '',
     startingBudget: 100000,
+  });
+
+  // Sponsor Form State
+  const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
+  const [sponsorForm, setSponsorForm] = useState<{
+    name: string;
+    tagline: string;
+    tier: SponsorTier;
+    logoUrl: string;
+    bannerUrl: string;
+    website: string;
+    active: boolean;
+    displayOrder: number;
+  }>({
+    name: '',
+    tagline: '',
+    tier: 'Title Sponsor',
+    logoUrl: '',
+    bannerUrl: '',
+    website: '',
+    active: true,
+    displayOrder: 1,
   });
 
   // Force Bid in Control Room State
@@ -497,6 +525,18 @@ export const AdminPanel: React.FC = () => {
         >
           <ShieldCheck className="w-4 h-4" />
           <span>Manage Teams ({teams.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('sponsors')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            adminTab === 'sponsors'
+              ? 'bg-amber-500 text-black shadow'
+              : 'bg-slate-900 text-slate-300 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Sponsors & Slideshow ({sponsors.length})</span>
         </button>
       </div>
 
@@ -1214,6 +1254,380 @@ export const AdminPanel: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* SUB-TAB 5: SPONSORS & BROADCAST SLIDESHOW MANAGER */}
+      {adminTab === 'sponsors' && (
+        <div className="space-y-8">
+          {/* Top Banner & Live Preview */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
+                  BROADCAST BRANDING & SPONSORSHIPS
+                </span>
+                <h3 className="font-sports text-2xl sm:text-3xl font-bold text-white uppercase">
+                  LIVE AUCTION SPONSOR SLIDESHOW MANAGER
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Upload and manage sponsor photos, logo banners, taglines, and tier priorities that rotate in real-time during live bidding.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={reseedSponsors}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                  title="Reseed standard tournament sponsor graphics"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Default Sponsors</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Interactive Slideshow Preview */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-amber-400" />
+                  <span>Live Auction Slideshow Preview</span>
+                </span>
+                <span className="text-[11px] text-slate-400 font-digital">
+                  {sponsors.filter(s => s.active).length} Active Sponsors in Queue
+                </span>
+              </div>
+
+              <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800/80">
+                <SponsorSlideshow variant="broadcast" autoPlayInterval={3500} />
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column: Left = Add/Edit Form, Right = Sponsor Inventory List */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Form Column */}
+            <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 className="font-sports text-xl font-bold text-white uppercase tracking-wide">
+                  {editingSponsorId ? 'EDIT SPONSOR PHOTO' : 'ADD NEW SPONSOR PHOTO'}
+                </h4>
+                {editingSponsorId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSponsorId(null);
+                      setSponsorForm({
+                        name: '',
+                        tagline: '',
+                        tier: 'Title Sponsor',
+                        logoUrl: '',
+                        bannerUrl: '',
+                        website: '',
+                        active: true,
+                        displayOrder: sponsors.length + 1,
+                      });
+                    }}
+                    className="text-xs text-amber-400 hover:underline"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+
+              {/* Preset Quick Images */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">
+                  Quick Preset Brands (Click to autofill)
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { name: 'Tata Motors', tier: 'Title Sponsor' as SponsorTier, tagline: 'Connecting Aspirations & Powering Cricket', logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80' },
+                    { name: 'Dream11', tier: 'Powered By' as SponsorTier, tagline: 'Official Fantasy Sports & Cricket Partner', logo: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&auto=format&fit=crop&q=80' },
+                    { name: 'JioCinema', tier: 'Digital Media Partner' as SponsorTier, tagline: 'Live Streaming in 4K Ultra HD', logo: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&auto=format&fit=crop&q=80' },
+                    { name: 'MRF Tyres', tier: 'Associate Sponsor' as SponsorTier, tagline: 'Pace & Performance on Every Pitch', logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=600&auto=format&fit=crop&q=80' },
+                    { name: 'Red Bull Energy', tier: 'Beverage Partner' as SponsorTier, tagline: 'Gives You Wings on the 22 Yards', logo: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop&q=80' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        setSponsorForm(prev => ({
+                          ...prev,
+                          name: preset.name,
+                          tier: preset.tier,
+                          tagline: preset.tagline,
+                          logoUrl: preset.logo,
+                        }));
+                      }}
+                      className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 text-[10px] font-semibold border border-slate-800"
+                    >
+                      + {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!sponsorForm.name.trim()) return;
+
+                  if (editingSponsorId) {
+                    updateSponsor(editingSponsorId, sponsorForm);
+                    setEditingSponsorId(null);
+                  } else {
+                    addSponsor(sponsorForm);
+                  }
+
+                  // Reset form
+                  setSponsorForm({
+                    name: '',
+                    tagline: '',
+                    tier: 'Associate Sponsor',
+                    logoUrl: '',
+                    bannerUrl: '',
+                    website: '',
+                    active: true,
+                    displayOrder: sponsors.length + 1,
+                  });
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">Sponsor / Brand Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={sponsorForm.name}
+                    onChange={(e) => setSponsorForm({ ...sponsorForm, name: e.target.value })}
+                    placeholder="e.g. Tata Motors, Jio, Dream11"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">Tagline / Slogan</label>
+                  <input
+                    type="text"
+                    value={sponsorForm.tagline}
+                    onChange={(e) => setSponsorForm({ ...sponsorForm, tagline: e.target.value })}
+                    placeholder="e.g. Official Tournament Title Partner"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-300 font-bold block mb-1">Sponsorship Tier</label>
+                    <select
+                      value={sponsorForm.tier}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, tier: e.target.value as SponsorTier })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="Title Sponsor">Title Sponsor</option>
+                      <option value="Powered By">Powered By</option>
+                      <option value="Associate Sponsor">Associate Sponsor</option>
+                      <option value="Beverage Partner">Beverage Partner</option>
+                      <option value="Kit Partner">Kit Partner</option>
+                      <option value="Digital Media Partner">Digital Media Partner</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-300 font-bold block mb-1">Display Order</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={sponsorForm.displayOrder}
+                      onChange={(e) => setSponsorForm({ ...sponsorForm, displayOrder: parseInt(e.target.value) || 1 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">Photo / Logo Image URL *</label>
+                  <input
+                    type="url"
+                    required
+                    value={sponsorForm.logoUrl}
+                    onChange={(e) => setSponsorForm({ ...sponsorForm, logoUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/photo-..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                {/* Live Image Preview */}
+                {sponsorForm.logoUrl && (
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3">
+                    <img
+                      src={sponsorForm.logoUrl}
+                      alt="Preview"
+                      className="w-16 h-16 rounded-lg object-cover border border-slate-700 bg-slate-900"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80';
+                      }}
+                    />
+                    <div className="text-xs">
+                      <span className="text-slate-400 block font-bold">Image Preview:</span>
+                      <strong className="text-white">{sponsorForm.name || 'Brand Name'}</strong>
+                      <span className="text-amber-400 block text-[11px]">{sponsorForm.tier}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">Website / Social Link (Optional)</label>
+                  <input
+                    type="text"
+                    value={sponsorForm.website}
+                    onChange={(e) => setSponsorForm({ ...sponsorForm, website: e.target.value })}
+                    placeholder="https://brand.com"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="sponsor-active-checkbox"
+                    checked={sponsorForm.active}
+                    onChange={(e) => setSponsorForm({ ...sponsorForm, active: e.target.checked })}
+                    className="w-4 h-4 rounded text-amber-500 bg-slate-950 border-slate-700"
+                  />
+                  <label htmlFor="sponsor-active-checkbox" className="text-xs text-slate-300 font-semibold cursor-pointer">
+                    Enable in Live Auction Slideshow
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg transition"
+                >
+                  {editingSponsorId ? '✓ Save Sponsor Changes' : '+ Add Sponsor to Slideshow'}
+                </button>
+              </form>
+            </div>
+
+            {/* List Column */}
+            <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 className="font-sports text-xl font-bold text-white uppercase tracking-wide">
+                  SPONSORS IN SLIDESHOW ({sponsors.length})
+                </h4>
+                <span className="text-xs text-slate-400 font-digital">
+                  Auto-rotates during live auction
+                </span>
+              </div>
+
+              <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                {sponsors.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 text-xs">
+                    No sponsors configured yet. Click "Reset Default Sponsors" above or add a new sponsor photo.
+                  </div>
+                ) : (
+                  sponsors.map((s, idx) => (
+                    <div
+                      key={s.id}
+                      className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition ${
+                        s.active
+                          ? 'bg-slate-950/80 border-slate-800 hover:border-amber-500/40'
+                          : 'bg-slate-950/30 border-slate-900 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <span className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                          #{s.displayOrder || idx + 1}
+                        </span>
+
+                        <img
+                          src={s.logoUrl}
+                          alt={s.name}
+                          className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900 flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80';
+                          }}
+                        />
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-sports text-lg font-bold text-white truncate">{s.name}</h5>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                              s.tier === 'Title Sponsor'
+                                ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300'
+                                : s.tier === 'Powered By'
+                                ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300'
+                                : 'bg-blue-500/20 border border-blue-500/50 text-blue-300'
+                            }`}>
+                              {s.tier}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 truncate max-w-sm mt-0.5">{s.tagline}</p>
+                          {s.website && (
+                            <span className="text-[10px] text-slate-500 block truncate">{s.website}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Toggle Active Button */}
+                        <button
+                          type="button"
+                          onClick={() => updateSponsor(s.id, { active: !s.active })}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition ${
+                            s.active
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          }`}
+                        >
+                          {s.active ? 'Active' : 'Hidden'}
+                        </button>
+
+                        {/* Edit Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSponsorId(s.id);
+                            setSponsorForm({
+                              name: s.name,
+                              tagline: s.tagline,
+                              tier: s.tier,
+                              logoUrl: s.logoUrl,
+                              bannerUrl: s.bannerUrl || '',
+                              website: s.website || '',
+                              active: s.active,
+                              displayOrder: s.displayOrder || idx + 1,
+                            });
+                          }}
+                          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400"
+                          title="Edit Sponsor"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete sponsor "${s.name}"?`)) {
+                              deleteSponsor(s.id);
+                            }
+                          }}
+                          className="p-2 rounded-lg bg-slate-800 hover:bg-red-950 text-red-400"
+                          title="Delete Sponsor"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

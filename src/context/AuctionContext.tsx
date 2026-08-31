@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { Player, Team, BidRecord, AuctionState, ViewTab, PlayerStatus } from '../types';
+import { Player, Team, BidRecord, AuctionState, ViewTab, PlayerStatus, Sponsor } from '../types';
 import { INITIAL_PLAYERS, INITIAL_TEAMS } from '../data/initialData';
+import { DEFAULT_SPONSORS } from '../data/defaultSponsors';
 import { sounds } from '../utils/audio';
 import { 
   db, 
@@ -21,6 +22,7 @@ import {
 interface AuctionContextType {
   players: Player[];
   teams: Team[];
+  sponsors: Sponsor[];
   auctionState: AuctionState;
   activePlayer: Player | null;
   currentTab: ViewTab;
@@ -64,6 +66,10 @@ interface AuctionContextType {
   addTeam: (newTeamData: Omit<Team, 'id' | 'totalSpent' | 'remainingBudget' | 'playersBought' | 'squadPlayerIds'>) => Promise<void>;
   updateTeam: (teamId: string, updatedData: Partial<Team>) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
+  addSponsor: (newSponsorData: Omit<Sponsor, 'id'>) => Promise<void>;
+  updateSponsor: (sponsorId: string, updatedData: Partial<Sponsor>) => Promise<void>;
+  deleteSponsor: (sponsorId: string) => Promise<void>;
+  reseedSponsors: () => Promise<void>;
   resetEntireAuction: () => Promise<void>;
   clearAllServerData: () => Promise<void>;
   reseedDatabase: () => Promise<void>;
@@ -105,6 +111,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Pure server data state - empty initial, real-time populated by Firebase
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>(DEFAULT_SPONSORS);
   const [auctionState, setAuctionState] = useState<AuctionState>(DEFAULT_AUCTION_STATE);
 
   const [currentTab, setCurrentTab] = useState<ViewTab>('home');
@@ -241,6 +248,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     let unsubscribePlayers: (() => void) | null = null;
     let unsubscribeTeams: (() => void) | null = null;
+    let unsubscribeSponsors: (() => void) | null = null;
     let unsubscribeAuction: (() => void) | null = null;
 
     const initFirebaseListeners = async () => {
@@ -290,7 +298,33 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         );
 
-        // 3. Realtime Listener for Live Auction State from Firebase
+        // 3. Realtime Listener for Sponsors directly from Firebase Firestore
+        unsubscribeSponsors = onSnapshot(
+          collection(db, 'sponsors'),
+          (snapshot) => {
+            if (snapshot.empty) {
+              // Auto-seed default sponsors if collection is empty
+              const batch = writeBatch(db);
+              DEFAULT_SPONSORS.forEach(s => {
+                batch.set(doc(db, 'sponsors', s.id), s);
+              });
+              batch.commit().catch(console.error);
+              setSponsors(DEFAULT_SPONSORS);
+            } else {
+              const loadedSponsors: Sponsor[] = [];
+              snapshot.forEach((docSnap) => {
+                loadedSponsors.push({ id: docSnap.id, ...docSnap.data() } as Sponsor);
+              });
+              loadedSponsors.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+              setSponsors(loadedSponsors);
+            }
+          },
+          (err) => {
+            console.error('Firestore sponsors listener error:', err);
+          }
+        );
+
+        // 4. Realtime Listener for Live Auction State from Firebase
         // Instantly synchronizes live bids across all connected team owners and spectator screens
         unsubscribeAuction = onSnapshot(
           doc(db, 'auction_state', 'current'),
@@ -334,6 +368,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       if (unsubscribePlayers) unsubscribePlayers();
       if (unsubscribeTeams) unsubscribeTeams();
+      if (unsubscribeSponsors) unsubscribeSponsors();
       if (unsubscribeAuction) unsubscribeAuction();
     };
   }, []);
@@ -927,6 +962,48 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const addSponsor = async (newSponsorData: Omit<Sponsor, 'id'>) => {
+    const newId = `sp-${Date.now()}`;
+    const newSponsor: Sponsor = {
+      ...newSponsorData,
+      id: newId,
+    };
+    try {
+      await setDoc(doc(db, 'sponsors', newId), newSponsor);
+    } catch (err) {
+      console.error('Firestore error adding sponsor:', err);
+    }
+  };
+
+  const updateSponsor = async (sponsorId: string, updatedData: Partial<Sponsor>) => {
+    try {
+      await updateDoc(doc(db, 'sponsors', sponsorId), updatedData);
+    } catch (err) {
+      console.error('Firestore error updating sponsor:', err);
+    }
+  };
+
+  const deleteSponsor = async (sponsorId: string) => {
+    try {
+      await deleteDoc(doc(db, 'sponsors', sponsorId));
+    } catch (err) {
+      console.error('Firestore error deleting sponsor:', err);
+    }
+  };
+
+  const reseedSponsors = async () => {
+    try {
+      const batch = writeBatch(db);
+      DEFAULT_SPONSORS.forEach(s => {
+        batch.set(doc(db, 'sponsors', s.id), s);
+      });
+      await batch.commit();
+      setSponsors(DEFAULT_SPONSORS);
+    } catch (err) {
+      console.error('Firestore error reseeding sponsors:', err);
+    }
+  };
+
   const resetEntireAuction = async () => {
     try {
       // Reset all player statuses to 'available' on server
@@ -1004,6 +1081,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         players,
         teams,
+        sponsors,
         auctionState,
         activePlayer,
         currentTab,
@@ -1041,6 +1119,10 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addTeam,
         updateTeam,
         deleteTeam,
+        addSponsor,
+        updateSponsor,
+        deleteSponsor,
+        reseedSponsors,
         resetEntireAuction,
         clearAllServerData,
         reseedDatabase: seedDatabase,

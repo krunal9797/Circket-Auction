@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { formatINR, formatTimer } from '../utils/formatters';
+import { SponsorSlideshow } from './SponsorSlideshow';
 
 export const LiveAuctionPage: React.FC = () => {
   const {
@@ -204,10 +205,18 @@ export const LiveAuctionPage: React.FC = () => {
         </div>
       )}
 
+      {/* Live Auction Sponsor Ticker */}
+      <SponsorSlideshow variant="ticker" autoPlayInterval={4000} className="rounded-xl shadow-md" />
+
       {/* NO ACTIVE PLAYER IN AUCTION - SELECTOR HERO */}
       {!activePlayer ? (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-10 text-center space-y-6">
-          <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-4xl mx-auto shadow-inner">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-10 text-center space-y-6">
+          {/* Active Sponsor Slideshow Banner during Standby */}
+          <div className="max-w-4xl mx-auto text-left">
+            <SponsorSlideshow variant="banner" autoPlayInterval={4000} />
+          </div>
+
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl mx-auto shadow-inner">
             🏏
           </div>
           <div className="max-w-md mx-auto space-y-2">
@@ -390,6 +399,18 @@ export const LiveAuctionPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Live Sponsor Banner Slideshow running during auction */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>KPL LIVE SPONSOR SPOTLIGHT</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Rotating Partner Showcase</span>
+              </div>
+              <SponsorSlideshow variant="banner" autoPlayInterval={4500} />
             </div>
           </div>
 

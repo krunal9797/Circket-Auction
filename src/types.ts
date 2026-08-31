@@ -97,6 +97,27 @@ export interface AuctionState {
   autoAiBidding: boolean;
 }
 
+export type SponsorTier = 
+  | 'Title Sponsor' 
+  | 'Powered By' 
+  | 'Associate Sponsor' 
+  | 'Official Partner' 
+  | 'Co-Sponsor'
+  | 'Beverage Partner'
+  | 'Media Partner';
+
+export interface Sponsor {
+  id: string;
+  name: string;
+  tier: SponsorTier;
+  tagline: string;
+  image: string; // Sponsor banner/photo URL
+  logo?: string;
+  website?: string;
+  displayOrder: number;
+  isActive: boolean;
+}
+
 export type ViewTab = 
   | 'home' 
   | 'live_auction' 

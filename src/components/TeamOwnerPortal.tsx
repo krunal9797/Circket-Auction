@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
 import { Team, Player } from '../types';
+import { SponsorSlideshow } from './SponsorSlideshow';
 
 export const TeamOwnerPortal: React.FC = () => {
   const { 
@@ -306,7 +307,10 @@ export const TeamOwnerPortal: React.FC = () => {
     : auctionState.currentBid + 1000;
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6 pb-16">
+      {/* Live Auction Sponsor Stream */}
+      <SponsorSlideshow variant="ticker" autoPlayInterval={4500} className="shadow-lg" />
+
       {/* War Room Header & Authentication Status Bar */}
       <div className="bg-slate-900 border-2 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
         style={{ borderColor: authenticatedTeam.color || '#f59e0b' }}
