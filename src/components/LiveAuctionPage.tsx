@@ -530,31 +530,92 @@ export const LiveAuctionPage: React.FC = () => {
               {/* QUICK BID INCREMENT BUTTONS */}
               {auctionState.phase === 'bidding' ? (
                 <div className="space-y-3">
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider block">
-                    QUICK BID INCREMENTS
-                  </label>
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-bold uppercase tracking-wider">QUICK BID INCREMENTS</span>
+                    <span className="text-[11px] text-amber-400">
+                      Purse: <strong>{formatINR(activeTeam.remainingBudget)}</strong>
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {[1000, 2000, 5000, 10000].map((inc) => (
-                      <button
-                        key={inc}
-                        id={`btn-bid-plus-${inc}`}
-                        onClick={() => handleIncrementBid(inc)}
-                        className="py-3 rounded-xl bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400 text-white hover:text-amber-400 font-digital font-extrabold text-sm sm:text-base transition active:scale-95 shadow cursor-pointer flex flex-col items-center justify-center"
-                      >
-                        <span>+{formatINR(inc)}</span>
-                      </button>
-                    ))}
+                    {[1000, 2000, 5000, 10000].map((inc) => {
+                      const projectedBid = auctionState.highestBidderTeamId === null
+                        ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
+                        : (auctionState.currentBid + inc);
+                      const isAffordable = projectedBid <= activeTeam.remainingBudget;
+                      const isLeading = auctionState.highestBidderTeamId === activeTeam.id;
+                      const isDisabled = !isAffordable || isLeading;
+
+                      return (
+                        <button
+                          key={inc}
+                          id={`btn-bid-plus-${inc}`}
+                          type="button"
+                          onClick={() => handleIncrementBid(inc)}
+                          disabled={isDisabled}
+                          className={`py-3 rounded-xl border font-digital font-extrabold text-sm sm:text-base transition active:scale-95 shadow flex flex-col items-center justify-center relative ${
+                            isDisabled
+                              ? 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                              : 'bg-slate-800 hover:bg-amber-500/20 border-slate-700 hover:border-amber-400 text-white hover:text-amber-400 cursor-pointer'
+                          }`}
+                          title={
+                            isLeading
+                              ? `${activeTeam.name} is already leading!`
+                              : !isAffordable
+                              ? `Exceeds remaining purse (${formatINR(activeTeam.remainingBudget)})`
+                              : `Bid ${formatINR(projectedBid)}`
+                          }
+                        >
+                          <span>+{formatINR(inc)}</span>
+                          <span className="text-[9px] font-sans font-normal opacity-75">
+                            {isLeading ? 'Leading' : !isAffordable ? 'Over Budget' : formatINR(projectedBid)}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Main Large PLACE BID Button */}
-                  <button
-                    id="btn-place-main-bid"
-                    onClick={() => handleIncrementBid(auctionState.currentBid > 25000 ? 5000 : 2000)}
-                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold text-lg sm:text-xl font-sports tracking-wider uppercase shadow-xl shadow-amber-500/25 transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer mt-2"
-                  >
-                    <Gavel className="w-6 h-6" />
-                    <span>PLACE BID • {formatINR(auctionState.currentBid + (auctionState.highestBidderTeamId ? (auctionState.currentBid > 25000 ? 5000 : 2000) : 0))}</span>
-                  </button>
+                  {(() => {
+                    const mainInc = auctionState.currentBid > 25000 ? 5000 : 2000;
+                    const mainProjectedBid = auctionState.highestBidderTeamId === null
+                      ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
+                      : (auctionState.currentBid + mainInc);
+                    const canAffordMainBid = mainProjectedBid <= activeTeam.remainingBudget;
+                    const isAlreadyWinning = auctionState.highestBidderTeamId === activeTeam.id;
+
+                    return (
+                      <div className="space-y-1.5 mt-2">
+                        <button
+                          id="btn-place-main-bid"
+                          type="button"
+                          onClick={() => handleIncrementBid(mainInc)}
+                          disabled={!canAffordMainBid || isAlreadyWinning}
+                          className={`w-full py-4 rounded-2xl font-extrabold text-lg sm:text-xl font-sports tracking-wider uppercase shadow-xl transition flex items-center justify-center gap-2 ${
+                            isAlreadyWinning
+                              ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 cursor-default shadow-none'
+                              : !canAffordMainBid
+                              ? 'bg-slate-900 border-2 border-red-500/40 text-red-400 opacity-60 cursor-not-allowed shadow-none'
+                              : 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-amber-500/25 active:scale-98 cursor-pointer'
+                          }`}
+                        >
+                          <Gavel className="w-6 h-6" />
+                          {isAlreadyWinning ? (
+                            <span>👑 {activeTeam.name} IS CURRENT LEADER • {formatINR(auctionState.currentBid)}</span>
+                          ) : !canAffordMainBid ? (
+                            <span>⚠️ INSUFFICIENT PURSE FOR {formatINR(mainProjectedBid)}</span>
+                          ) : (
+                            <span>PLACE BID • {formatINR(mainProjectedBid)}</span>
+                          )}
+                        </button>
+                        {!canAffordMainBid && !isAlreadyWinning && (
+                          <p className="text-[11px] text-red-400 text-center font-medium">
+                            Cannot place bid: Next bid of {formatINR(mainProjectedBid)} exceeds {activeTeam.name}'s remaining purse of {formatINR(activeTeam.remainingBudget)}.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Custom Bid Input */}
                   <form onSubmit={handleCustomBidSubmit} className="flex gap-2 pt-2">

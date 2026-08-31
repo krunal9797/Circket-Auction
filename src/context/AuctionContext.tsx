@@ -8,12 +8,14 @@ import {
   initAuth, 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   setDoc, 
   updateDoc, 
   deleteDoc, 
   onSnapshot, 
-  writeBatch 
+  writeBatch,
+  runTransaction
 } from '../lib/firebase';
 
 interface AuctionContextType {
@@ -231,6 +233,10 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
+  // Real-time tracking refs
+  const prevBidRef = useRef<number>(0);
+  const prevBidsCountRef = useRef<number>(0);
+
   // Initialize Firebase and setup Realtime Listeners directly from server
   useEffect(() => {
     let unsubscribePlayers: (() => void) | null = null;
@@ -285,11 +291,25 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
 
         // 3. Realtime Listener for Live Auction State from Firebase
+        // Instantly synchronizes live bids across all connected team owners and spectator screens
         unsubscribeAuction = onSnapshot(
           doc(db, 'auction_state', 'current'),
           (docSnap) => {
             if (docSnap.exists()) {
               const remoteState = docSnap.data() as AuctionState;
+              
+              // Real-time sound notification when a new bid is received from any connected device
+              const newBidsCount = remoteState.bids?.length || 0;
+              if (
+                newBidsCount > prevBidsCountRef.current &&
+                remoteState.highestBidderTeamId !== null &&
+                prevBidsCountRef.current > 0
+              ) {
+                sounds.playBidSound();
+              }
+              prevBidRef.current = remoteState.currentBid || 0;
+              prevBidsCountRef.current = newBidsCount;
+
               setAuctionState(remoteState);
             } else {
               setDoc(doc(db, 'auction_state', 'current'), DEFAULT_AUCTION_STATE, { merge: true });
@@ -555,9 +575,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Place increment bid (Firestore update)
+  // Place increment bid (Atomic Firestore Transaction to prevent bid overlaps and enforce budget coverage)
   const placeBid = async (teamId: string, incrementAmount: number): Promise<{ success: boolean; message: string }> => {
-    // Strict Team Owner Authentication Security Check
+    // 1. Strict Team Owner Authentication Security Check
     if (authenticatedTeamId && teamId !== authenticatedTeamId && userRole !== 'admin') {
       const allowedTeam = teams.find(t => t.id === authenticatedTeamId);
       return {
@@ -568,73 +588,113 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const team = teams.find(t => t.id === teamId);
     if (!team) {
-      return { success: false, message: 'Team not found' };
+      return { success: false, message: 'Franchise not found' };
     }
 
-    if (!auctionState.isLive || auctionState.phase !== 'bidding') {
-      return { success: false, message: 'No live auction in progress' };
-    }
-
-    const currentBid = auctionState.currentBid;
-    let nextBid: number;
-
-    if (auctionState.highestBidderTeamId === null) {
-      nextBid = currentBid > 0 ? currentBid : (activePlayer?.basePrice || 5000);
-    } else {
-      nextBid = currentBid + incrementAmount;
-    }
-
-    if (nextBid > team.remainingBudget) {
+    // Fast client pre-check
+    if (team.remainingBudget <= 0) {
       return {
         success: false,
-        message: `${team.name} cannot bid ₹${nextBid.toLocaleString('en-IN')}. Remaining purse is only ₹${team.remainingBudget.toLocaleString('en-IN')}.`,
+        message: `Purse Exhausted: ${team.name} has ₹0 remaining purse and cannot submit bids.`,
       };
     }
-
-    if (auctionState.highestBidderTeamId === team.id) {
-      return {
-        success: false,
-        message: `${team.name} is already the highest bidder at ₹${currentBid.toLocaleString('en-IN')}!`,
-      };
-    }
-
-    sounds.playBidSound();
-
-    const newBidRecord: BidRecord = {
-      id: `bid-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      round: auctionState.bids.length + 1,
-      amount: nextBid,
-      teamId: team.id,
-      teamName: team.name,
-      teamShortCode: team.shortCode,
-      teamColor: team.color,
-      timestamp: Date.now(),
-    };
-
-    const updatedState: AuctionState = {
-      ...auctionState,
-      currentBid: nextBid,
-      highestBidderTeamId: team.id,
-      highestBidderTeamName: team.name,
-      timerSeconds: Math.max(auctionState.timerSeconds, 15),
-      bids: [newBidRecord, ...auctionState.bids],
-    };
 
     try {
-      await setDoc(doc(db, 'auction_state', 'current'), updatedState, { merge: true });
-    } catch (err) {
-      console.error('Firestore error placing bid:', err);
-    }
+      const auctionDocRef = doc(db, 'auction_state', 'current');
+      const teamDocRef = doc(db, 'teams', team.id);
 
-    return {
-      success: true,
-      message: `Bid of ₹${nextBid.toLocaleString('en-IN')} placed by ${team.name}!`,
-    };
+      const result = await runTransaction(db, async (transaction) => {
+        const [auctionSnap, teamSnap] = await Promise.all([
+          transaction.get(auctionDocRef),
+          transaction.get(teamDocRef)
+        ]);
+
+        if (!auctionSnap.exists()) {
+          throw new Error('Auction session state is not active on server.');
+        }
+
+        const remoteState = auctionSnap.data() as AuctionState;
+
+        if (!remoteState.isLive || remoteState.phase !== 'bidding') {
+          throw new Error('No live auction currently in bidding phase.');
+        }
+
+        if (remoteState.isPaused) {
+          throw new Error('Auction is paused by the auctioneer. Bidding is temporarily suspended.');
+        }
+
+        // Get authoritative server-side team budget
+        let teamRemainingBudget = team.remainingBudget;
+        if (teamSnap.exists()) {
+          const teamData = teamSnap.data() as Team;
+          teamRemainingBudget = teamData.remainingBudget ?? teamRemainingBudget;
+        }
+
+        // Calculate next bid based on current atomic server state
+        const serverCurrentBid = remoteState.currentBid || 0;
+        let nextBid: number;
+
+        if (remoteState.highestBidderTeamId === null) {
+          nextBid = serverCurrentBid > 0 ? serverCurrentBid : (activePlayer?.basePrice || 5000);
+        } else {
+          nextBid = serverCurrentBid + incrementAmount;
+        }
+
+        // STRICT REAL-TIME BUDGET COVERAGE VALIDATION
+        if (nextBid > teamRemainingBudget) {
+          throw new Error(`Insufficient Purse: ${team.name} remaining budget is ₹${teamRemainingBudget.toLocaleString('en-IN')}, which does not cover the bid of ₹${nextBid.toLocaleString('en-IN')}.`);
+        }
+
+        // Prevent team from bidding against themselves
+        if (remoteState.highestBidderTeamId === team.id) {
+          throw new Error(`${team.name} is already the leading highest bidder at ₹${serverCurrentBid.toLocaleString('en-IN')}!`);
+        }
+
+        const newBidRecord: BidRecord = {
+          id: `bid-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          round: (remoteState.bids?.length || 0) + 1,
+          amount: nextBid,
+          teamId: team.id,
+          teamName: team.name,
+          teamShortCode: team.shortCode,
+          teamColor: team.color,
+          timestamp: Date.now(),
+        };
+
+        const updatedState: AuctionState = {
+          ...remoteState,
+          currentBid: nextBid,
+          highestBidderTeamId: team.id,
+          highestBidderTeamName: team.name,
+          timerSeconds: Math.max(remoteState.timerSeconds || 0, 15),
+          bids: [newBidRecord, ...(remoteState.bids || [])],
+        };
+
+        transaction.set(auctionDocRef, updatedState, { merge: true });
+
+        return {
+          nextBid,
+          teamName: team.name,
+        };
+      });
+
+      sounds.playBidSound();
+      return {
+        success: true,
+        message: `Bid of ₹${result.nextBid.toLocaleString('en-IN')} placed by ${result.teamName}!`,
+      };
+    } catch (err: any) {
+      console.warn('Bid transaction conflict / validation rejection:', err);
+      return {
+        success: false,
+        message: err.message || 'Bid overlap detected: Another team placed a bid simultaneously. Please raise your bid.',
+      };
+    }
   };
 
-  // Place custom target bid (Firestore update)
+  // Place custom target bid (Atomic Firestore Transaction to prevent overlap)
   const placeCustomBid = async (teamId: string, targetAmount: number): Promise<{ success: boolean; message: string }> => {
-    // Strict Team Owner Authentication Security Check
+    // 1. Strict Team Owner Authentication Security Check
     if (authenticatedTeamId && teamId !== authenticatedTeamId && userRole !== 'admin') {
       const allowedTeam = teams.find(t => t.id === authenticatedTeamId);
       return {
@@ -644,55 +704,102 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const team = teams.find(t => t.id === teamId);
-    if (!team) return { success: false, message: 'Team not found' };
+    if (!team) return { success: false, message: 'Franchise not found' };
 
-    if (!auctionState.isLive || auctionState.phase !== 'bidding') {
-      return { success: false, message: 'No live auction in progress' };
-    }
-
-    if (targetAmount <= auctionState.currentBid && auctionState.highestBidderTeamId !== null) {
-      return {
-        success: false,
-        message: `Bid must be higher than current bid of ₹${auctionState.currentBid.toLocaleString('en-IN')}`,
-      };
-    }
-
+    // Fast client pre-check
     if (targetAmount > team.remainingBudget) {
       return {
         success: false,
-        message: `Exceeds ${team.name}'s remaining budget of ₹${team.remainingBudget.toLocaleString('en-IN')}`,
+        message: `Insufficient Purse: Bid of ₹${targetAmount.toLocaleString('en-IN')} exceeds ${team.name}'s remaining purse of ₹${team.remainingBudget.toLocaleString('en-IN')}.`,
       };
     }
 
-    sounds.playBidSound();
-
-    const newBidRecord: BidRecord = {
-      id: `bid-${Date.now()}`,
-      round: auctionState.bids.length + 1,
-      amount: targetAmount,
-      teamId: team.id,
-      teamName: team.name,
-      teamShortCode: team.shortCode,
-      teamColor: team.color,
-      timestamp: Date.now(),
-    };
-
-    const updatedState: AuctionState = {
-      ...auctionState,
-      currentBid: targetAmount,
-      highestBidderTeamId: team.id,
-      highestBidderTeamName: team.name,
-      timerSeconds: 20,
-      bids: [newBidRecord, ...auctionState.bids],
-    };
-
     try {
-      await setDoc(doc(db, 'auction_state', 'current'), updatedState, { merge: true });
-    } catch (err) {
-      console.error('Firestore error placing custom bid:', err);
-    }
+      const auctionDocRef = doc(db, 'auction_state', 'current');
+      const teamDocRef = doc(db, 'teams', team.id);
 
-    return { success: true, message: `Custom bid of ₹${targetAmount.toLocaleString('en-IN')} placed!` };
+      const result = await runTransaction(db, async (transaction) => {
+        const [auctionSnap, teamSnap] = await Promise.all([
+          transaction.get(auctionDocRef),
+          transaction.get(teamDocRef)
+        ]);
+
+        if (!auctionSnap.exists()) {
+          throw new Error('Auction session state document not found.');
+        }
+
+        const remoteState = auctionSnap.data() as AuctionState;
+
+        if (!remoteState.isLive || remoteState.phase !== 'bidding') {
+          throw new Error('No live auction currently in progress.');
+        }
+
+        if (remoteState.isPaused) {
+          throw new Error('Auction is currently paused by the auctioneer.');
+        }
+
+        // Get authoritative server budget
+        let teamRemainingBudget = team.remainingBudget;
+        if (teamSnap.exists()) {
+          const teamData = teamSnap.data() as Team;
+          teamRemainingBudget = teamData.remainingBudget ?? teamRemainingBudget;
+        }
+
+        // STRICT REAL-TIME BUDGET COVERAGE VALIDATION
+        if (targetAmount > teamRemainingBudget) {
+          throw new Error(`Insufficient Purse: ${team.name} remaining budget is ₹${teamRemainingBudget.toLocaleString('en-IN')}, which does not cover the bid of ₹${targetAmount.toLocaleString('en-IN')}.`);
+        }
+
+        // Verify target amount is strictly higher than on-server current bid
+        const serverCurrentBid = remoteState.currentBid || 0;
+        if (targetAmount <= serverCurrentBid && remoteState.highestBidderTeamId !== null) {
+          throw new Error(`Bid Overlap: The current winning bid is already ₹${serverCurrentBid.toLocaleString('en-IN')}. Your bid must be strictly higher than ₹${serverCurrentBid.toLocaleString('en-IN')}.`);
+        }
+
+        if (remoteState.highestBidderTeamId === team.id) {
+          throw new Error(`${team.name} is already the leading highest bidder at ₹${serverCurrentBid.toLocaleString('en-IN')}!`);
+        }
+
+        const newBidRecord: BidRecord = {
+          id: `bid-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          round: (remoteState.bids?.length || 0) + 1,
+          amount: targetAmount,
+          teamId: team.id,
+          teamName: team.name,
+          teamShortCode: team.shortCode,
+          teamColor: team.color,
+          timestamp: Date.now(),
+        };
+
+        const updatedState: AuctionState = {
+          ...remoteState,
+          currentBid: targetAmount,
+          highestBidderTeamId: team.id,
+          highestBidderTeamName: team.name,
+          timerSeconds: 20,
+          bids: [newBidRecord, ...(remoteState.bids || [])],
+        };
+
+        transaction.set(auctionDocRef, updatedState, { merge: true });
+
+        return {
+          targetAmount,
+          teamName: team.name,
+        };
+      });
+
+      sounds.playBidSound();
+      return {
+        success: true,
+        message: `Custom bid of ₹${result.targetAmount.toLocaleString('en-IN')} accepted for ${result.teamName}!`,
+      };
+    } catch (err: any) {
+      console.warn('Custom bid transaction conflict:', err);
+      return {
+        success: false,
+        message: err.message || 'Bid overlap detected: Another team placed a bid simultaneously. Please raise your bid.',
+      };
+    }
   };
 
   const pauseAuction = async () => {

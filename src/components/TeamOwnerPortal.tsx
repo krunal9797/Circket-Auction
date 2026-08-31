@@ -97,15 +97,23 @@ export const TeamOwnerPortal: React.FC = () => {
     } else {
       setBidFeedback({ type: 'error', message: res.message });
     }
-    setTimeout(() => setBidFeedback(null), 4000);
+    setTimeout(() => setBidFeedback(null), 5000);
   };
 
   const handlePlaceCustomBid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authenticatedTeam) return;
-    const amount = parseInt(customBidAmount.replace(/,/g, ''), 10);
+    const amount = parseInt(customBidAmount.replace(/\D/g, ''), 10);
     if (isNaN(amount) || amount <= 0) {
       setBidFeedback({ type: 'error', message: 'Please enter a valid numeric bid amount.' });
+      return;
+    }
+
+    if (amount > authenticatedTeam.remainingBudget) {
+      setBidFeedback({ 
+        type: 'error', 
+        message: `Insufficient Purse: Bid of ${formatINR(amount)} exceeds ${authenticatedTeam.name}'s remaining purse of ${formatINR(authenticatedTeam.remainingBudget)}.` 
+      });
       return;
     }
 
@@ -117,7 +125,7 @@ export const TeamOwnerPortal: React.FC = () => {
     } else {
       setBidFeedback({ type: 'error', message: res.message });
     }
-    setTimeout(() => setBidFeedback(null), 4000);
+    setTimeout(() => setBidFeedback(null), 5000);
   };
 
   // If no team is authenticated, display the Luxury Secure Authentication Portal
@@ -563,33 +571,81 @@ export const TeamOwnerPortal: React.FC = () => {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[1000, 2000, 5000, 10000].map((inc) => (
-                <button
-                  key={inc}
-                  type="button"
-                  onClick={() => handlePlaceIncrementBid(inc)}
-                  disabled={isHighestBidder || nextMinBid > authenticatedTeam.remainingBudget}
-                  className="py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition disabled:opacity-40 active:scale-95"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>+ {formatINR(inc)}</span>
-                </button>
-              ))}
+              {[1000, 2000, 5000, 10000].map((inc) => {
+                const projectedBid = auctionState.highestBidderTeamId === null
+                  ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
+                  : (auctionState.currentBid + inc);
+                const isAffordable = projectedBid <= authenticatedTeam.remainingBudget;
+                const isDisabled = isHighestBidder || !isAffordable;
+
+                return (
+                  <button
+                    key={inc}
+                    type="button"
+                    onClick={() => handlePlaceIncrementBid(inc)}
+                    disabled={isDisabled}
+                    className={`py-3.5 px-4 rounded-xl border font-black text-xs uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
+                      isDisabled
+                        ? 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                        : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white cursor-pointer'
+                    }`}
+                    title={
+                      isHighestBidder
+                        ? 'You are already leading the bidding!'
+                        : !isAffordable
+                        ? `Exceeds your remaining purse of ${formatINR(authenticatedTeam.remainingBudget)}`
+                        : `Bid ${formatINR(projectedBid)}`
+                    }
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>+ {formatINR(inc)}</span>
+                    </div>
+                    <span className="text-[10px] font-digital font-normal opacity-75">
+                      {isHighestBidder ? 'Leading' : !isAffordable ? 'Over Budget' : formatINR(projectedBid)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Big Primary Place Bid Button */}
-            <button
-              onClick={() => handlePlaceIncrementBid(1000)}
-              disabled={isHighestBidder || nextMinBid > authenticatedTeam.remainingBudget}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-black font-black text-sm sm:text-base uppercase tracking-wider shadow-2xl shadow-amber-500/30 flex items-center justify-center gap-2 transition disabled:opacity-40 active:scale-[0.99]"
-            >
-              <Gavel className="w-5 h-5" />
-              <span>
-                {isHighestBidder 
-                  ? `You Are Leading at ${formatINR(auctionState.currentBid)}` 
-                  : `Bid ${formatINR(nextMinBid)} as ${authenticatedTeam.name}`}
-              </span>
-            </button>
+            {(() => {
+              const primaryProjectedBid = nextMinBid;
+              const isAffordable = primaryProjectedBid <= authenticatedTeam.remainingBudget;
+              const isDisabled = isHighestBidder || !isAffordable;
+
+              return (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePlaceIncrementBid(1000)}
+                    disabled={isDisabled}
+                    className={`w-full py-4 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider shadow-2xl flex items-center justify-center gap-2 transition active:scale-[0.99] ${
+                      isHighestBidder
+                        ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 cursor-default shadow-none'
+                        : !isAffordable
+                        ? 'bg-slate-900 border-2 border-red-500/40 text-red-400 opacity-60 cursor-not-allowed shadow-none'
+                        : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-black shadow-amber-500/30 cursor-pointer'
+                    }`}
+                  >
+                    <Gavel className="w-5 h-5" />
+                    <span>
+                      {isHighestBidder 
+                        ? `👑 You Are Leading at ${formatINR(auctionState.currentBid)}` 
+                        : !isAffordable
+                        ? `⚠️ Insufficient Purse for ${formatINR(primaryProjectedBid)}`
+                        : `Bid ${formatINR(primaryProjectedBid)} as ${authenticatedTeam.name}`}
+                    </span>
+                  </button>
+                  {!isAffordable && !isHighestBidder && (
+                    <p className="text-[11px] text-red-400 text-center font-medium">
+                      Cannot place bid: Minimum next bid of {formatINR(primaryProjectedBid)} exceeds your available purse of {formatINR(authenticatedTeam.remainingBudget)}.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Custom Bid Input Form */}
             <form onSubmit={handlePlaceCustomBid} className="flex flex-col sm:flex-row items-center gap-3 pt-2">

@@ -3,12 +3,14 @@ import {
   getFirestore, 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   setDoc, 
   updateDoc, 
   deleteDoc, 
   onSnapshot, 
   writeBatch,
+  runTransaction,
   serverTimestamp,
   type Unsubscribe
 } from 'firebase/firestore';
@@ -37,12 +39,14 @@ export const initAuth = async () => {
 export {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
   writeBatch,
+  runTransaction,
   serverTimestamp,
   type Unsubscribe
 };
