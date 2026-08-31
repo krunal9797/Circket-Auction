@@ -1,0 +1,6 @@
+{
+  "name": "Cricket Auction Pro",
+  "description": "Premium IPL-style cricket player live auction platform with dynamic bidding, team budget tracking, leaderboards, and auctioneer control room.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
