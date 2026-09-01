@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ShieldCheck, 
   Users, 
@@ -7,10 +7,16 @@ import {
   ArrowRight, 
   Crown, 
   Flame,
-  Plus
+  Plus,
+  Share2,
+  MessageCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { formatINR } from '../utils/formatters';
+import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
+import { ShareLinksModal } from './ShareLinksModal';
 
 export const TeamsPage: React.FC = () => {
   const { 
@@ -20,6 +26,19 @@ export const TeamsPage: React.FC = () => {
     setCurrentTab,
     setUserRole 
   } = useAuction();
+
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const teamRegUrl = getShareableUrl('register_team');
+
+  const handleCopyLink = async () => {
+    const success = await copyToClipboard(teamRegUrl);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   return (
     <div className="space-y-8 pb-16 max-w-7xl mx-auto">
@@ -38,19 +57,52 @@ export const TeamsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setCurrentTab('register_team')}
+            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition flex items-center gap-2 shadow-lg shadow-amber-950/40"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Register Team (ટીમ બનાવો)</span>
+          </button>
+
+          <button
+            onClick={() => openWhatsAppShare(getWhatsAppShareText('team_reg', teamRegUrl))}
+            className="px-3.5 py-2.5 rounded-xl bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/40 text-xs font-bold transition flex items-center gap-1.5"
+            title="Share Team Registration URL on WhatsApp"
+          >
+            <MessageCircle className="w-4 h-4 fill-current" />
+            <span className="hidden sm:inline">WhatsApp Share</span>
+          </button>
+
+          <button
+            onClick={handleCopyLink}
+            className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-300 text-xs font-semibold transition flex items-center gap-1.5"
+            title="Copy Team Registration Link"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedLink ? 'Copied URL!' : 'Copy Link'}</span>
+          </button>
+
           <button
             onClick={() => {
               setUserRole('admin');
               setCurrentTab('admin');
             }}
-            className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200 text-xs font-bold transition flex items-center gap-2"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-300 text-xs font-bold transition flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4 text-amber-400" />
-            <span>Add / Manage Teams</span>
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Admin Desk</span>
           </button>
         </div>
       </div>
+
+      {/* Share Links Modal */}
+      <ShareLinksModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onNavigateTab={setCurrentTab}
+      />
 
       {/* Teams Grid */}
       {teams.length === 0 ? (

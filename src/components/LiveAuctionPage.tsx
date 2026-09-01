@@ -646,7 +646,7 @@ export const LiveAuctionPage: React.FC = () => {
                         type="number"
                         id="input-custom-bid-amount"
                         placeholder="Enter custom amount..."
-                        value={customBidAmount}
+                        value={customBidAmount || ''}
                         onChange={(e) => setCustomBidAmount(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-sm text-white font-digital font-bold focus:outline-none focus:border-amber-400"
                       />

@@ -20,11 +20,14 @@ import {
   RefreshCw,
   Lock,
   KeyRound,
-  UserCheck
+  UserCheck,
+  UserPlus,
+  Share2
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { ViewTab } from '../types';
 import { formatINR } from '../utils/formatters';
+import { ShareLinksModal } from './ShareLinksModal';
 
 export const Navbar: React.FC = () => {
   const { 
@@ -47,6 +50,7 @@ export const Navbar: React.FC = () => {
   } = useAuction();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const activeTeam = teams.find(t => t.id === (authenticatedTeamId || activeBiddingTeamId)) || teams[0];
 
   const navItems: { id: ViewTab; label: string; icon: React.ReactNode; badge?: string | number }[] = [
@@ -57,17 +61,28 @@ export const Navbar: React.FC = () => {
       icon: <Radio className={`w-4 h-4 ${auctionState.isLive ? 'text-red-400 animate-pulse' : ''}`} />,
       badge: auctionState.isLive ? 'LIVE' : undefined
     },
-    { id: 'auction_board', label: 'Broadcast Board', icon: <Layers className="w-4 h-4" /> },
+    { id: 'auction_board', label: 'Broadcast', icon: <Layers className="w-4 h-4" /> },
     { 
       id: 'team_portal', 
-      label: authenticatedTeam ? `${authenticatedTeam.shortCode} War Room` : 'Team Portal', 
+      label: authenticatedTeam ? `${authenticatedTeam.shortCode} War Room` : 'War Room', 
       icon: <KeyRound className="w-4 h-4 text-amber-400" />,
       badge: authenticatedTeam ? 'AUTH' : undefined
+    },
+    { 
+      id: 'register_player', 
+      label: 'Player Reg', 
+      icon: <UserPlus className="w-4 h-4 text-emerald-400" />,
+      badge: 'OPEN'
+    },
+    { 
+      id: 'register_team', 
+      label: 'Team Reg', 
+      icon: <ShieldCheck className="w-4 h-4 text-amber-400" /> 
     },
     { id: 'players', label: 'Players', icon: <Users className="w-4 h-4" />, badge: stats.playersAvailable },
     { id: 'teams', label: 'Teams', icon: <ShieldCheck className="w-4 h-4" />, badge: stats.totalTeams },
     { id: 'results', label: 'Results', icon: <PieChart className="w-4 h-4" />, badge: stats.playersSold },
-    { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
+    { id: 'leaderboard', label: 'Rankings', icon: <Trophy className="w-4 h-4" /> },
     { id: 'admin', label: 'Admin Desk', icon: <Gavel className="w-4 h-4 text-amber-400" /> },
   ];
 
@@ -234,7 +249,7 @@ export const Navbar: React.FC = () => {
                 </span>
                 <select
                   id="header-team-selector"
-                  value={activeBiddingTeamId}
+                  value={activeBiddingTeamId || ''}
                   onChange={(e) => setActiveBiddingTeamId(e.target.value)}
                   className="bg-transparent text-xs font-bold text-amber-400 focus:outline-none cursor-pointer pr-1"
                 >
@@ -246,6 +261,18 @@ export const Navbar: React.FC = () => {
                 </select>
               </div>
             )}
+
+            {/* Share Links Glowing Button */}
+            <button
+              id="btn-nav-share-links"
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-900/40 transition hover:scale-105 active:scale-95 border border-emerald-400/40 cursor-pointer"
+              title="Share Registration Links on WhatsApp & URL"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">Share Links</span>
+              <span className="text-[10px] bg-black/30 px-1 py-0.2 rounded font-mono">મોકલો</span>
+            </button>
 
             {/* Mute Toggle */}
             <button
@@ -294,6 +321,14 @@ export const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <div className="flex lg:hidden items-center gap-2">
             <button
+              id="btn-mobile-share-links"
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 shadow"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Share</span>
+            </button>
+            <button
               id="btn-mobile-sound-toggle"
               onClick={toggleMute}
               className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-amber-400"
@@ -314,12 +349,27 @@ export const Navbar: React.FC = () => {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#090D16] border-b border-slate-800 px-4 py-4 space-y-2 shadow-2xl">
+          {/* Quick Share Banner in Mobile Drawer */}
+          <button
+            onClick={() => {
+              setIsShareModalOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs flex items-center justify-between shadow-lg mb-2"
+          >
+            <span className="flex items-center gap-2">
+              <Share2 className="w-4 h-4" />
+              <span>Share Registration Links (રજીસ્ટ્રેશન લિંક શેર કરો)</span>
+            </span>
+            <span className="text-[10px] bg-black/30 px-2 py-0.5 rounded">WhatsApp</span>
+          </button>
+
           {/* Active Team selector */}
           <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 mb-3">
             <label className="text-xs text-slate-400 block mb-1">Your Bidding Team:</label>
             <select
               id="mobile-team-selector"
-              value={activeBiddingTeamId}
+              value={activeBiddingTeamId || ''}
               onChange={(e) => setActiveBiddingTeamId(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 text-amber-400 text-sm font-bold rounded-lg p-2"
             >
@@ -359,6 +409,13 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Share Links Modal */}
+      <ShareLinksModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onNavigateTab={handleTabClick}
+      />
     </header>
   );
 };

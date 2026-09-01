@@ -9,11 +9,18 @@ import {
   Sparkles,
   ArrowUpDown,
   Plus,
-  Eye
+  Eye,
+  UserPlus,
+  Share2,
+  MessageCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { PlayerRole, PlayerStatus } from '../types';
 import { formatINR } from '../utils/formatters';
+import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
+import { ShareLinksModal } from './ShareLinksModal';
 
 type FilterType = 'All' | PlayerRole | 'Available' | 'Sold' | 'Unsold';
 
@@ -31,6 +38,18 @@ export const PlayerDatabase: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [sortBy, setSortBy] = useState<'name' | 'basePrice' | 'runs' | 'wickets'>('basePrice');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const playerRegUrl = getShareableUrl('register_player');
+
+  const handleCopyLink = async () => {
+    const success = await copyToClipboard(playerRegUrl);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const filterTabs: FilterType[] = [
     'All',
@@ -104,19 +123,52 @@ export const PlayerDatabase: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setCurrentTab('register_player')}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950/40"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Register as Player (ફોર્મ ભરો)</span>
+          </button>
+
+          <button
+            onClick={() => openWhatsAppShare(getWhatsAppShareText('player_reg', playerRegUrl))}
+            className="px-3.5 py-2.5 rounded-xl bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/40 text-xs font-bold transition flex items-center gap-1.5"
+            title="Share Player Registration URL on WhatsApp"
+          >
+            <MessageCircle className="w-4 h-4 fill-current" />
+            <span className="hidden sm:inline">WhatsApp Share</span>
+          </button>
+
+          <button
+            onClick={handleCopyLink}
+            className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-300 text-xs font-semibold transition flex items-center gap-1.5"
+            title="Copy Registration Link"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedLink ? 'Copied URL!' : 'Copy Link'}</span>
+          </button>
+
           <button
             onClick={() => {
               setUserRole('admin');
               setCurrentTab('admin');
             }}
-            className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500/50 text-slate-200 text-xs font-bold transition flex items-center gap-2"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500/50 text-slate-300 text-xs font-bold transition flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4 text-amber-400" />
-            <span>Add New Player</span>
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Admin Desk</span>
           </button>
         </div>
       </div>
+
+      {/* Share Links Modal */}
+      <ShareLinksModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onNavigateTab={setCurrentTab}
+      />
 
       {/* Search & Filter Controls */}
       <div className="space-y-4 bg-slate-900/90 border border-slate-800 p-5 rounded-3xl shadow-xl">
@@ -127,7 +179,7 @@ export const PlayerDatabase: React.FC = () => {
             <input
               type="text"
               id="input-search-players"
-              value={searchQuery}
+              value={searchQuery || ''}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by player name, nickname, city, team..."
               className="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-12 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
@@ -139,7 +191,7 @@ export const PlayerDatabase: React.FC = () => {
             <div className="relative flex-1">
               <select
                 id="select-sort-players"
-                value={sortBy}
+                value={sortBy || 'basePrice'}
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
               >

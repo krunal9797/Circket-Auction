@@ -59,6 +59,11 @@ export interface Player {
   soldPrice?: number;
   bidHistory: BidRecord[];
   isFeatured?: boolean;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  registeredAt?: string;
+  jerseyNumber?: string;
 }
 
 export interface Team {
@@ -72,6 +77,11 @@ export interface Team {
   accessPin?: string;
   ownerEmail?: string;
   ownerPhone?: string;
+  viceCaptain?: string;
+  managerName?: string;
+  slogan?: string;
+  city?: string;
+  registeredAt?: string;
   startingBudget: number;
   totalSpent: number;
   remainingBudget: number;
@@ -123,6 +133,8 @@ export type ViewTab =
   | 'live_auction' 
   | 'auction_board' 
   | 'team_portal'
+  | 'register_player'
+  | 'register_team'
   | 'players' 
   | 'player_detail' 
   | 'player_profile'

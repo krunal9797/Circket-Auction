@@ -107,6 +107,44 @@ const DEFAULT_AUCTION_STATE: AuctionState = {
 
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
+const resolveTabFromUrl = (): ViewTab => {
+  if (typeof window === 'undefined') return 'home';
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get('tab') || searchParams.get('page') || searchParams.get('view') || searchParams.get('register');
+    
+    if (tabParam === 'player') return 'register_player';
+    if (tabParam === 'team') return 'register_team';
+
+    if (tabParam) {
+      const clean = tabParam.toLowerCase().replace(/-/g, '_');
+      const validTabs: ViewTab[] = [
+        'home', 'live_auction', 'auction_board', 'team_portal', 
+        'register_player', 'register_team', 'players', 'player_detail', 
+        'player_profile', 'teams', 'team_detail', 'results', 'leaderboard', 'admin'
+      ];
+      if (validTabs.includes(clean as ViewTab)) {
+        return clean as ViewTab;
+      }
+    }
+    const hash = window.location.hash.replace('#', '').toLowerCase().replace(/-/g, '_');
+    if (hash === 'register_player' || hash === 'player_registration') return 'register_player';
+    if (hash === 'register_team' || hash === 'team_registration') return 'register_team';
+    
+    const validTabs: ViewTab[] = [
+      'home', 'live_auction', 'auction_board', 'team_portal', 
+      'register_player', 'register_team', 'players', 'player_detail', 
+      'player_profile', 'teams', 'team_detail', 'results', 'leaderboard', 'admin'
+    ];
+    if (validTabs.includes(hash as ViewTab)) {
+      return hash as ViewTab;
+    }
+  } catch (err) {
+    console.error('Error parsing URL tab:', err);
+  }
+  return 'home';
+};
+
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Pure server data state - empty initial, real-time populated by Firebase
   const [players, setPlayers] = useState<Player[]>([]);
@@ -114,7 +152,34 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [sponsors, setSponsors] = useState<Sponsor[]>(DEFAULT_SPONSORS);
   const [auctionState, setAuctionState] = useState<AuctionState>(DEFAULT_AUCTION_STATE);
 
-  const [currentTab, setCurrentTab] = useState<ViewTab>('home');
+  const [currentTab, setCurrentTabState] = useState<ViewTab>(resolveTabFromUrl);
+
+  const setCurrentTab = useCallback((tab: ViewTab) => {
+    setCurrentTabState(tab);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        url.hash = tab.replace('_', '-');
+        window.history.pushState({ tab }, '', url.toString());
+      } catch (e) {
+        // Ignore URL push errors in sandboxes
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setCurrentTabState(resolveTabFromUrl());
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
+
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'team_bidder' | 'spectator'>('team_bidder');

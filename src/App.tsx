@@ -12,6 +12,8 @@ import { AuctionResultPage } from './components/AuctionResultPage';
 import { LeaderboardPage } from './components/LeaderboardPage';
 import { AdminPanel } from './components/AdminPanel';
 import { TeamOwnerPortal } from './components/TeamOwnerPortal';
+import { PlayerRegistrationPage } from './components/PlayerRegistrationPage';
+import { TeamRegistrationPage } from './components/TeamRegistrationPage';
 import { 
   Trophy, 
   ShieldCheck, 
@@ -43,6 +45,8 @@ const AppContent: React.FC = () => {
         {currentTab === 'live_auction' && <LiveAuctionPage />}
         {currentTab === 'auction_board' && <LiveAuctionBoard />}
         {currentTab === 'team_portal' && <TeamOwnerPortal />}
+        {currentTab === 'register_player' && <PlayerRegistrationPage />}
+        {currentTab === 'register_team' && <TeamRegistrationPage />}
         {currentTab === 'players' && <PlayerDatabase />}
         {currentTab === 'player_profile' && <PlayerProfileView />}
         {currentTab === 'teams' && <TeamsPage />}

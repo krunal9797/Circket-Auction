@@ -224,7 +224,7 @@ export const TeamOwnerPortal: React.FC = () => {
                   </div>
                   <input
                     type={showPin ? 'text' : 'password'}
-                    value={pinInput}
+                    value={pinInput || ''}
                     onChange={(e) => setPinInput(e.target.value)}
                     placeholder="Enter 4-digit PIN (e.g. 1234)"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-11 pr-12 py-3.5 text-white font-mono tracking-widest text-center text-lg placeholder:text-slate-600 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
@@ -657,7 +657,7 @@ export const TeamOwnerPortal: React.FC = () => {
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 font-bold">₹</span>
                 <input
                   type="number"
-                  value={customBidAmount}
+                  value={customBidAmount || ''}
                   onChange={(e) => setCustomBidAmount(e.target.value)}
                   placeholder={`Custom Bid Amount (Min > ${formatINR(auctionState.currentBid || 0)})`}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-4 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500"

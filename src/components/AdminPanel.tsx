@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Gavel, 
   ShieldCheck, 
@@ -24,12 +24,17 @@ import {
   Database,
   Copy,
   Check,
-  KeyRound
+  KeyRound,
+  Share2,
+  UserPlus,
+  MessageCircle
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { Player, Team, PlayerRole, BattingStyle, BowlingStyle, Sponsor, SponsorTier } from '../types';
 import { formatINR } from '../utils/formatters';
 import { SponsorSlideshow } from './SponsorSlideshow';
+import { ShareLinksModal } from './ShareLinksModal';
+import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
 export const AdminPanel: React.FC = () => {
   const {
@@ -67,6 +72,7 @@ export const AdminPanel: React.FC = () => {
   } = useAuction();
 
   const [isReseeding, setIsReseeding] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Admin authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // Default true for frictionless testing, with unlock UI
@@ -145,6 +151,13 @@ export const AdminPanel: React.FC = () => {
   const [selectedBidderTeamId, setSelectedBidderTeamId] = useState<string>('team-tigers');
   const [forceBidAmount, setForceBidAmount] = useState<string>('');
 
+  // Sync selected bidder team with available teams
+  useEffect(() => {
+    if (teams.length > 0 && !teams.some(t => t.id === selectedBidderTeamId)) {
+      setSelectedBidderTeamId(teams[0].id);
+    }
+  }, [teams, selectedBidderTeamId]);
+
   // Authentication check
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,28 +173,28 @@ export const AdminPanel: React.FC = () => {
   const handleEditPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setPlayerForm({
-      name: player.name,
-      nickname: player.nickname,
-      image: player.image,
-      role: player.role,
-      age: player.age,
-      dob: player.dob,
-      city: player.city,
-      battingStyle: player.battingStyle,
-      bowlingStyle: player.bowlingStyle,
-      basePrice: player.basePrice,
-      matches: player.stats.matches,
-      innings: player.stats.innings,
-      runs: player.stats.runs,
-      highestScore: player.stats.highestScore,
-      average: player.stats.average,
-      strikeRate: player.stats.strikeRate,
-      fifties: player.stats.fifties,
-      hundreds: player.stats.hundreds,
-      wickets: player.stats.wickets,
-      economy: player.stats.economy,
-      bestBowling: player.stats.bestBowling,
-      bio: player.bio,
+      name: player.name || '',
+      nickname: player.nickname || '',
+      image: player.image || '',
+      role: player.role || 'Batsman',
+      age: player.age ?? 20,
+      dob: player.dob || '',
+      city: player.city || '',
+      battingStyle: player.battingStyle || 'Right-hand bat',
+      bowlingStyle: player.bowlingStyle || 'Right-arm medium',
+      basePrice: player.basePrice ?? 10000,
+      matches: player.stats?.matches ?? 0,
+      innings: player.stats?.innings ?? 0,
+      runs: player.stats?.runs ?? 0,
+      highestScore: player.stats?.highestScore || '',
+      average: player.stats?.average ?? 0,
+      strikeRate: player.stats?.strikeRate ?? 0,
+      fifties: player.stats?.fifties ?? 0,
+      hundreds: player.stats?.hundreds ?? 0,
+      wickets: player.stats?.wickets ?? 0,
+      economy: player.stats?.economy ?? 0,
+      bestBowling: player.stats?.bestBowling || '',
+      bio: player.bio || '',
     });
     setAdminTab('add_player');
   };
@@ -354,6 +367,15 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
+            title="Share Registration and Live URLs with Players & Teams"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Share URLs (લિંક મોકલો)</span>
+          </button>
+
           <button
             onClick={async () => {
               if (window.confirm('WARNING: Are you sure you want to completely WIPE ALL PLAYERS AND TEAMS from Cloud Firestore server? This will delete all current records so only your new data will exist.')) {
@@ -831,7 +853,7 @@ export const AdminPanel: React.FC = () => {
               <input
                 type="text"
                 required
-                value={playerForm.name}
+                value={playerForm.name || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
                 placeholder="e.g. Virat Patel"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -843,7 +865,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Nickname</label>
               <input
                 type="text"
-                value={playerForm.nickname}
+                value={playerForm.nickname || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, nickname: e.target.value })}
                 placeholder="e.g. King"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -855,7 +877,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Profile Photo URL</label>
               <input
                 type="url"
-                value={playerForm.image}
+                value={playerForm.image || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, image: e.target.value })}
                 placeholder="https://images.unsplash.com/..."
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -866,7 +888,7 @@ export const AdminPanel: React.FC = () => {
             <div>
               <label className="text-xs text-slate-300 font-bold block mb-1">Player Role *</label>
               <select
-                value={playerForm.role}
+                value={playerForm.role || 'Batsman'}
                 onChange={(e) => setPlayerForm({ ...playerForm, role: e.target.value as PlayerRole })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400 cursor-pointer"
               >
@@ -886,7 +908,7 @@ export const AdminPanel: React.FC = () => {
                 step="500"
                 min="1000"
                 max="100000"
-                value={playerForm.basePrice}
+                value={playerForm.basePrice ?? 10000}
                 onChange={(e) => setPlayerForm({ ...playerForm, basePrice: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-amber-400 font-digital font-bold focus:outline-none focus:border-amber-400"
               />
@@ -897,7 +919,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Age</label>
               <input
                 type="number"
-                value={playerForm.age}
+                value={playerForm.age ?? 20}
                 onChange={(e) => setPlayerForm({ ...playerForm, age: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
               />
@@ -908,7 +930,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Date of Birth</label>
               <input
                 type="text"
-                value={playerForm.dob}
+                value={playerForm.dob || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, dob: e.target.value })}
                 placeholder="e.g. 15 Aug 1995"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -920,7 +942,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">City / Origin</label>
               <input
                 type="text"
-                value={playerForm.city}
+                value={playerForm.city || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, city: e.target.value })}
                 placeholder="e.g. Delhi"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -931,7 +953,7 @@ export const AdminPanel: React.FC = () => {
             <div>
               <label className="text-xs text-slate-300 font-bold block mb-1">Batting Style</label>
               <select
-                value={playerForm.battingStyle}
+                value={playerForm.battingStyle || 'Right-hand bat'}
                 onChange={(e) => setPlayerForm({ ...playerForm, battingStyle: e.target.value as BattingStyle })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               >
@@ -944,7 +966,7 @@ export const AdminPanel: React.FC = () => {
             <div>
               <label className="text-xs text-slate-300 font-bold block mb-1">Bowling Style</label>
               <select
-                value={playerForm.bowlingStyle}
+                value={playerForm.bowlingStyle || 'Right-arm medium'}
                 onChange={(e) => setPlayerForm({ ...playerForm, bowlingStyle: e.target.value as BowlingStyle })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               >
@@ -965,7 +987,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Matches</label>
               <input
                 type="number"
-                value={playerForm.matches}
+                value={playerForm.matches ?? 0}
                 onChange={(e) => setPlayerForm({ ...playerForm, matches: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               />
@@ -976,7 +998,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Total Runs</label>
               <input
                 type="number"
-                value={playerForm.runs}
+                value={playerForm.runs ?? 0}
                 onChange={(e) => setPlayerForm({ ...playerForm, runs: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               />
@@ -987,7 +1009,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Highest Score</label>
               <input
                 type="text"
-                value={playerForm.highestScore}
+                value={playerForm.highestScore || ''}
                 onChange={(e) => setPlayerForm({ ...playerForm, highestScore: e.target.value })}
                 placeholder="e.g. 113*"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
@@ -1000,7 +1022,7 @@ export const AdminPanel: React.FC = () => {
               <input
                 type="number"
                 step="0.01"
-                value={playerForm.strikeRate}
+                value={playerForm.strikeRate ?? 0}
                 onChange={(e) => setPlayerForm({ ...playerForm, strikeRate: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               />
@@ -1011,7 +1033,7 @@ export const AdminPanel: React.FC = () => {
               <label className="text-xs text-slate-300 font-bold block mb-1">Wickets</label>
               <input
                 type="number"
-                value={playerForm.wickets}
+                value={playerForm.wickets ?? 0}
                 onChange={(e) => setPlayerForm({ ...playerForm, wickets: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
               />
@@ -1023,7 +1045,7 @@ export const AdminPanel: React.FC = () => {
             <label className="text-xs text-slate-300 font-bold block mb-1">Player Bio / Summary</label>
             <textarea
               rows={3}
-              value={playerForm.bio}
+              value={playerForm.bio || ''}
               onChange={(e) => setPlayerForm({ ...playerForm, bio: e.target.value })}
               placeholder="Short description of playing style and achievements..."
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1064,7 +1086,7 @@ export const AdminPanel: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={teamForm.name}
+                  value={teamForm.name || ''}
                   onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
                   placeholder="e.g. Katasvan Titans"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1075,7 +1097,7 @@ export const AdminPanel: React.FC = () => {
                 <label className="text-xs text-slate-300 font-bold block mb-1">Team Logo Emoji / Crest</label>
                 <input
                   type="text"
-                  value={teamForm.logo}
+                  value={teamForm.logo || ''}
                   onChange={(e) => setTeamForm({ ...teamForm, logo: e.target.value })}
                   placeholder="e.g. 🦁, ⚡, 🐅"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
@@ -1086,7 +1108,7 @@ export const AdminPanel: React.FC = () => {
                 <label className="text-xs text-slate-300 font-bold block mb-1">Starting Budget (₹)</label>
                 <input
                   type="number"
-                  value={teamForm.startingBudget}
+                  value={teamForm.startingBudget ?? 100000}
                   onChange={(e) => setTeamForm({ ...teamForm, startingBudget: Number(e.target.value) })}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-amber-400 font-digital font-bold"
                 />
@@ -1096,7 +1118,7 @@ export const AdminPanel: React.FC = () => {
                 <label className="text-xs text-slate-300 font-bold block mb-1">Owner Name</label>
                 <input
                   type="text"
-                  value={teamForm.owner}
+                  value={teamForm.owner || ''}
                   onChange={(e) => setTeamForm({ ...teamForm, owner: e.target.value })}
                   placeholder="e.g. Ramesh Patel"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
@@ -1107,7 +1129,7 @@ export const AdminPanel: React.FC = () => {
                 <label className="text-xs text-slate-300 font-bold block mb-1">Captain Name</label>
                 <input
                   type="text"
-                  value={teamForm.captain}
+                  value={teamForm.captain || ''}
                   onChange={(e) => setTeamForm({ ...teamForm, captain: e.target.value })}
                   placeholder="e.g. Rohit Gamit"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white"
@@ -1122,7 +1144,7 @@ export const AdminPanel: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={teamForm.accessPin}
+                  value={teamForm.accessPin || ''}
                   onChange={(e) => setTeamForm({ ...teamForm, accessPin: e.target.value })}
                   placeholder="e.g. 1234, 7788"
                   className="w-full bg-slate-950 border border-amber-500/50 rounded-xl p-3 text-sm text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-400"
@@ -1402,7 +1424,7 @@ export const AdminPanel: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={sponsorForm.name}
+                    value={sponsorForm.name || ''}
                     onChange={(e) => setSponsorForm({ ...sponsorForm, name: e.target.value })}
                     placeholder="e.g. Tata Motors, Jio, Dream11"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1413,7 +1435,7 @@ export const AdminPanel: React.FC = () => {
                   <label className="text-xs text-slate-300 font-bold block mb-1">Tagline / Slogan</label>
                   <input
                     type="text"
-                    value={sponsorForm.tagline}
+                    value={sponsorForm.tagline || ''}
                     onChange={(e) => setSponsorForm({ ...sponsorForm, tagline: e.target.value })}
                     placeholder="e.g. Official Tournament Title Partner"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1424,7 +1446,7 @@ export const AdminPanel: React.FC = () => {
                   <div>
                     <label className="text-xs text-slate-300 font-bold block mb-1">Sponsorship Tier</label>
                     <select
-                      value={sponsorForm.tier}
+                      value={sponsorForm.tier || 'Title Sponsor'}
                       onChange={(e) => setSponsorForm({ ...sponsorForm, tier: e.target.value as SponsorTier })}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
                     >
@@ -1443,7 +1465,7 @@ export const AdminPanel: React.FC = () => {
                       type="number"
                       min="1"
                       max="99"
-                      value={sponsorForm.displayOrder}
+                      value={sponsorForm.displayOrder ?? 1}
                       onChange={(e) => setSponsorForm({ ...sponsorForm, displayOrder: parseInt(e.target.value) || 1 })}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
                     />
@@ -1455,7 +1477,7 @@ export const AdminPanel: React.FC = () => {
                   <input
                     type="url"
                     required
-                    value={sponsorForm.logoUrl}
+                    value={sponsorForm.logoUrl || ''}
                     onChange={(e) => setSponsorForm({ ...sponsorForm, logoUrl: e.target.value })}
                     placeholder="https://images.unsplash.com/photo-..."
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1485,7 +1507,7 @@ export const AdminPanel: React.FC = () => {
                   <label className="text-xs text-slate-300 font-bold block mb-1">Website / Social Link (Optional)</label>
                   <input
                     type="text"
-                    value={sponsorForm.website}
+                    value={sponsorForm.website || ''}
                     onChange={(e) => setSponsorForm({ ...sponsorForm, website: e.target.value })}
                     placeholder="https://brand.com"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
@@ -1496,7 +1518,7 @@ export const AdminPanel: React.FC = () => {
                   <input
                     type="checkbox"
                     id="sponsor-active-checkbox"
-                    checked={sponsorForm.active}
+                    checked={sponsorForm.active ?? true}
                     onChange={(e) => setSponsorForm({ ...sponsorForm, active: e.target.checked })}
                     className="w-4 h-4 rounded text-amber-500 bg-slate-950 border-slate-700"
                   />
@@ -1632,6 +1654,13 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Share Links Modal */}
+      <ShareLinksModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onNavigateTab={setCurrentTab}
+      />
     </div>
   );
 };

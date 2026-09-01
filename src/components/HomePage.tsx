@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Play, 
   Users, 
@@ -9,14 +9,24 @@ import {
   Zap, 
   DollarSign, 
   CheckCircle2, 
-  ArrowRight,
-  Flame,
-  Award,
-  Sparkles
+  ArrowRight, 
+  Flame, 
+  Award, 
+  Sparkles,
+  UserPlus,
+  Share2,
+  MessageCircle,
+  Copy,
+  Check,
+  ExternalLink,
+  Lock,
+  Radio
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { formatINR } from '../utils/formatters';
 import { SponsorSlideshow } from './SponsorSlideshow';
+import { ShareLinksModal } from './ShareLinksModal';
+import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
 export const HomePage: React.FC = () => {
   const { 
@@ -29,8 +39,20 @@ export const HomePage: React.FC = () => {
     viewPlayerDetails 
   } = useAuction();
 
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const featuredPlayers = players.filter(p => p.isFeatured || p.basePrice >= 12000).slice(0, 4);
   const availablePlayers = players.filter(p => p.status === 'available');
+
+  const handleCopy = async (key: string, tab: string) => {
+    const url = getShareableUrl(tab);
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2500);
+    }
+  };
 
   const handleStartAuction = () => {
     if (auctionState.isLive && auctionState.activePlayerId) {
@@ -41,6 +63,9 @@ export const HomePage: React.FC = () => {
       setCurrentTab('live_auction');
     }
   };
+
+  const playerRegUrl = getShareableUrl('register_player');
+  const teamRegUrl = getShareableUrl('register_team');
 
   return (
     <div className="space-y-12 pb-16">
@@ -183,6 +208,127 @@ export const HomePage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* REGISTRATION & URL DISTRIBUTION HUB */}
+      <section className="bg-gradient-to-r from-slate-900 via-[#0B132B] to-slate-900 border-2 border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Section Header with Quick WhatsApp Share */}
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">
+                OFFICIAL REGISTRATION OPEN • KPL 2026
+              </span>
+            </div>
+            <h2 className="font-sports text-2xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+              ખેલાડી અને ટીમ રજીસ્ટ્રેશન લિંક શેર કરો
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300">
+              Share official registration links with cricket players and franchise owners across WhatsApp & social media.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 transition hover:scale-105 active:scale-95 shrink-0"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>બધાને લિંક મોકલો (Share URLs)</span>
+          </button>
+        </div>
+
+        {/* 2 Big Action Cards: Player Reg vs Team Reg */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+          {/* Card 1: Player Registration */}
+          <div className="bg-slate-950/80 border border-emerald-500/40 hover:border-emerald-500/80 rounded-2xl p-5 sm:p-6 transition-all space-y-4 shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-xl shadow">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-sports text-xl font-bold text-white uppercase group-hover:text-emerald-400 transition">
+                    Player Registration
+                  </h3>
+                  <span className="text-xs text-emerald-400 font-semibold">ખેલાડી રજીસ્ટ્રેશન ફોર્મ</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-black bg-emerald-500 text-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                FOR CRICKETERS
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Submit your batting/bowling style, career statistics, matches played, preferred jersey number, and requested base price for the live auction pool.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+              <button
+                onClick={() => setCurrentTab('register_player')}
+                className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Open Player Form (ફોર્મ ભરો)</span>
+              </button>
+
+              <button
+                onClick={() => openWhatsAppShare(getWhatsAppShareText('player_reg', playerRegUrl))}
+                className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-white border border-emerald-500/40 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 fill-current" />
+                <span>WhatsApp Share</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Team / Franchise Registration */}
+          <div className="bg-slate-950/80 border border-amber-500/40 hover:border-amber-500/80 rounded-2xl p-5 sm:p-6 transition-all space-y-4 shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-xl shadow">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-sports text-xl font-bold text-white uppercase group-hover:text-amber-400 transition">
+                    Franchise Registration
+                  </h3>
+                  <span className="text-xs text-amber-400 font-semibold">ટીમ / ફ્રેન્ચાઈઝી રજીસ્ટ્રેશન</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-black bg-amber-500 text-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                FOR OWNERS
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Register your team identity, select crest emoji and theme colors, assign captain, and set your 4-Digit Secret War Room Access PIN for auction day bidding.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+              <button
+                onClick={() => setCurrentTab('register_team')}
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Register Team (ટીમ બનાવો)</span>
+              </button>
+
+              <button
+                onClick={() => openWhatsAppShare(getWhatsAppShareText('team_reg', teamRegUrl))}
+                className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 hover:text-white border border-amber-500/40 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 fill-current" />
+                <span>WhatsApp Share</span>
+              </button>
             </div>
           </div>
         </div>
@@ -503,6 +649,13 @@ export const HomePage: React.FC = () => {
           </p>
         </div>
       </section>
+
+      {/* Share Links Modal */}
+      <ShareLinksModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onNavigateTab={setCurrentTab}
+      />
     </div>
   );
 };
