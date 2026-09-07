@@ -64,6 +64,11 @@ export interface Player {
   email?: string;
   registeredAt?: string;
   jerseyNumber?: string;
+  faliyu?: string;
+  jerseySize?: string;
+  paymentScreenshot?: string;
+  paymentStatus?: 'pending' | 'verified' | 'unpaid';
+  transactionId?: string;
 }
 
 export interface Team {

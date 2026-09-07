@@ -27,7 +27,9 @@ import {
   KeyRound,
   Share2,
   UserPlus,
-  MessageCircle
+  MessageCircle,
+  Receipt,
+  X
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { Player, Team, PlayerRole, BattingStyle, BowlingStyle, Sponsor, SponsorTier } from '../types';
@@ -73,6 +75,7 @@ export const AdminPanel: React.FC = () => {
 
   const [isReseeding, setIsReseeding] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [viewingPaymentProof, setViewingPaymentProof] = useState<string | null>(null);
 
   // Admin authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // Default true for frictionless testing, with unlock UI
@@ -762,6 +765,7 @@ export const AdminPanel: React.FC = () => {
                   <th className="py-3 px-4">Base Price</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Sold Price</th>
+                  <th className="py-3 px-4 text-center">Payment Proof</th>
                   <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
@@ -776,7 +780,9 @@ export const AdminPanel: React.FC = () => {
                       />
                       <div>
                         <strong className="text-white block">{p.name}</strong>
-                        <span className="text-[10px] text-slate-400">{p.city} • Age {p.age}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {p.faliyu ? `${p.faliyu}, ` : ''}{p.city} • Age {p.age}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-amber-400 font-semibold">{p.role}</td>
@@ -794,6 +800,20 @@ export const AdminPanel: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 font-digital font-bold text-emerald-400">
                       {p.soldPrice ? formatINR(p.soldPrice) : '—'}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {p.paymentScreenshot ? (
+                        <button
+                          onClick={() => setViewingPaymentProof(p.paymentScreenshot || null)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold cursor-pointer transition"
+                          title="View Payment Screenshot"
+                        >
+                          <Receipt className="w-3 h-3" />
+                          <span>View Proof</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">No Proof</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -1661,6 +1681,51 @@ export const AdminPanel: React.FC = () => {
         onClose={() => setIsShareModalOpen(false)}
         onNavigateTab={setCurrentTab}
       />
+
+      {/* Payment Proof Preview Modal */}
+      {viewingPaymentProof && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4">
+            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-sports text-lg font-bold text-white uppercase">
+                  Player Registration Payment Proof
+                </h3>
+              </div>
+              <button
+                onClick={() => setViewingPaymentProof(null)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 flex flex-col items-center">
+              <div className="max-h-[65vh] overflow-auto rounded-2xl border border-slate-800 shadow-inner bg-black/50 p-2">
+                <img
+                  src={viewingPaymentProof}
+                  alt="Payment Screenshot"
+                  className="w-full h-auto max-h-[60vh] object-contain rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
+              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>UPI / Bank Transfer Receipt</span>
+              </span>
+              <button
+                onClick={() => setViewingPaymentProof(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

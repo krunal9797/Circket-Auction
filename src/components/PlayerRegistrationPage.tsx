@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   UserPlus, 
   CheckCircle2, 
@@ -12,95 +12,113 @@ import {
   Trophy, 
   Flame, 
   Award,
-  ChevronRight,
   Image as ImageIcon,
   Phone,
   Calendar,
   MapPin,
   Activity,
   Zap,
-  Info
+  Upload,
+  Camera,
+  X,
+  Shirt,
+  CreditCard,
+  Receipt,
+  FileCheck
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { PlayerRole, BattingStyle, BowlingStyle, Player } from '../types';
 import { formatINR } from '../utils/formatters';
 import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
-// Curated high quality cricket player action photo presets
-const PHOTO_PRESETS = [
-  {
-    label: 'Aggressive Batsman',
-    url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop&q=80',
-    role: 'Batsman'
-  },
-  {
-    label: 'Fast Bowler in Action',
-    url: 'https://images.unsplash.com/photo-1531415074868-036b1c57e3ce?w=800&auto=format&fit=crop&q=80',
-    role: 'Bowler'
-  },
-  {
-    label: 'Dynamic All-Rounder',
-    url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80',
-    role: 'All-Rounder'
-  },
-  {
-    label: 'Wicket Keeper Gloves',
-    url: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80',
-    role: 'Wicket Keeper'
-  },
-  {
-    label: 'Power Hitter Focus',
-    url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=800&auto=format&fit=crop&q=80',
-    role: 'Batsman'
-  },
-  {
-    label: 'Spin Wizard Delivery',
-    url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=80',
-    role: 'Bowler'
-  }
-];
+const JERSEY_SIZES = ['S (36)', 'M (38)', 'L (40)', 'XL (42)', 'XXL (44)', '3XL (46)'];
 
 export const PlayerRegistrationPage: React.FC = () => {
   const { addPlayer, setCurrentTab, stats } = useAuction();
 
   const [form, setForm] = useState({
     name: '',
-    nickname: '',
+    nickname: '', // Jersey Name
+    faliyu: '',   // Faliyu (ફળિયું)
+    jerseySize: 'M (38)', // Jersey Size
     phone: '',
     whatsapp: '',
     email: '',
     role: 'All-Rounder' as PlayerRole,
     age: 22,
-    dob: '',
     city: 'Katasvan',
     battingStyle: 'Right-hand bat' as BattingStyle,
     bowlingStyle: 'Right-arm medium' as BowlingStyle,
-    basePrice: 10000,
-    matches: 25,
-    innings: 20,
-    runs: 450,
-    highestScore: '68*',
-    average: 28.5,
-    strikeRate: 135.2,
-    fifties: 2,
-    hundreds: 0,
-    wickets: 18,
-    economy: 7.2,
-    bestBowling: '4/18',
-    jerseyNumber: '18',
-    bio: '',
-    image: PHOTO_PRESETS[2].url,
+    jerseyNumber: '7',
+    image: '',
+    paymentScreenshot: '',
+    transactionId: '',
     agreeTerms: true,
   });
 
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [paymentPreview, setPaymentPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedPlayer, setSubmittedPlayer] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const paymentFileInputRef = useRef<HTMLInputElement>(null);
+
   const directPageUrl = getShareableUrl('register_player');
 
-  const handlePresetSelect = (url: string) => {
-    setForm(prev => ({ ...prev, image: url }));
+  // Single Player Photo Upload Handler
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ફોટોની સાઈઝ 5MB કરતાં ઓછી હોવી જોઈએ (Please upload an image smaller than 5MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      setForm(prev => ({ ...prev, image: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setImagePreview(null);
+    setForm(prev => ({ ...prev, image: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Payment Screenshot Upload Handler
+  const handlePaymentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('પેમેન્ટ સ્ક્રીનશોટની સાઈઝ 5MB કરતાં ઓછી હોવી જોઈએ (Please upload an image smaller than 5MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setPaymentPreview(result);
+      setForm(prev => ({ ...prev, paymentScreenshot: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePayment = () => {
+    setPaymentPreview(null);
+    setForm(prev => ({ ...prev, paymentScreenshot: '' }));
+    if (paymentFileInputRef.current) {
+      paymentFileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,37 +127,47 @@ export const PlayerRegistrationPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const newPlayerData = {
+      // Default standard tournament base price is ₹5,000
+      const standardBasePrice = 5000;
+      
+      const defaultImage = form.image || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop&q=80';
+
+      const newPlayerData: Partial<Player> = {
         name: form.name.trim(),
-        nickname: form.nickname.trim() || form.name.split(' ')[0],
-        image: form.image || PHOTO_PRESETS[0].url,
+        nickname: form.nickname.trim() || form.name.split(' ')[0], // Jersey Name
+        image: defaultImage,
         role: form.role,
         age: Number(form.age) || 22,
-        dob: form.dob || '2004-01-01',
+        dob: '2004-01-01',
         city: form.city.trim() || 'Katasvan',
+        faliyu: form.faliyu.trim() || '',
+        jerseySize: form.jerseySize,
         battingStyle: form.battingStyle,
         bowlingStyle: form.bowlingStyle,
-        basePrice: Number(form.basePrice) || 10000,
+        basePrice: standardBasePrice,
+        paymentScreenshot: form.paymentScreenshot || undefined,
+        transactionId: form.transactionId.trim() || undefined,
+        paymentStatus: form.paymentScreenshot ? 'pending' : 'unpaid',
         stats: {
-          matches: Number(form.matches) || 0,
-          innings: Number(form.innings) || 0,
-          runs: Number(form.runs) || 0,
-          highestScore: form.highestScore || '0',
-          average: Number(form.average) || 0,
-          strikeRate: Number(form.strikeRate) || 0,
-          fifties: Number(form.fifties) || 0,
-          hundreds: Number(form.hundreds) || 0,
-          wickets: Number(form.wickets) || 0,
-          economy: Number(form.economy) || 0,
-          bestBowling: form.bestBowling || '0/0',
+          matches: 12,
+          innings: 10,
+          runs: 180,
+          highestScore: '42*',
+          average: 20.0,
+          strikeRate: 120.0,
+          fifties: 0,
+          hundreds: 0,
+          wickets: 6,
+          economy: 7.2,
+          bestBowling: '2/18',
         },
-        bio: form.bio.trim() || `${form.role} from ${form.city}. Ready for KPL 2026.`,
+        bio: `${form.role} from ${form.faliyu ? form.faliyu + ', ' : ''}${form.city}. Ready for KPL 2026.`,
         phone: form.phone.trim(),
         whatsapp: form.whatsapp.trim() || form.phone.trim(),
         email: form.email.trim(),
         jerseyNumber: form.jerseyNumber.trim() || '7',
         registeredAt: new Date().toISOString(),
-        isFeatured: form.basePrice >= 15000,
+        isFeatured: false,
       };
 
       await addPlayer(newPlayerData);
@@ -157,17 +185,29 @@ export const PlayerRegistrationPage: React.FC = () => {
 
   const handleResetForAnother = () => {
     setSubmittedPlayer(null);
-    setForm(prev => ({
-      ...prev,
+    setImagePreview(null);
+    setPaymentPreview(null);
+    setForm({
       name: '',
       nickname: '',
+      faliyu: '',
+      jerseySize: 'M (38)',
       phone: '',
       whatsapp: '',
-      dob: '',
-      highestScore: '',
-      bestBowling: '',
-      bio: '',
-    }));
+      email: '',
+      role: 'All-Rounder',
+      age: 22,
+      city: 'Katasvan',
+      battingStyle: 'Right-hand bat',
+      bowlingStyle: 'Right-arm medium',
+      jerseyNumber: '7',
+      image: '',
+      paymentScreenshot: '',
+      transactionId: '',
+      agreeTerms: true,
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (paymentFileInputRef.current) paymentFileInputRef.current.value = '';
   };
 
   const handleCopyDirectLink = async () => {
@@ -196,7 +236,7 @@ export const PlayerRegistrationPage: React.FC = () => {
               ખેલાડી રજીસ્ટ્રેશન ફોર્મ
             </h1>
             <p className="text-sm text-slate-300 max-w-xl">
-              Register yourself for the <strong>Katasvan Premier League 2026</strong> live cricket auction. Fill in your playing style, career statistics, and base price.
+              Register yourself for the <strong>Katasvan Premier League 2026</strong> live cricket auction. Fill in your personal details, playing style, and payment proof.
             </p>
           </div>
 
@@ -204,7 +244,7 @@ export const PlayerRegistrationPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
             <button
               onClick={() => openWhatsAppShare(playerShareText)}
-              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition hover:scale-105 active:scale-95"
+              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition hover:scale-105 active:scale-95 cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 fill-current" />
               <span>WhatsApp પર લિંક મોકલો</span>
@@ -212,7 +252,7 @@ export const PlayerRegistrationPage: React.FC = () => {
 
             <button
               onClick={handleCopyDirectLink}
-              className={`px-5 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition border ${
+              className={`px-5 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition border cursor-pointer ${
                 copiedLink
                   ? 'bg-emerald-500 text-black border-emerald-400'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700'
@@ -271,14 +311,21 @@ export const PlayerRegistrationPage: React.FC = () => {
               <img
                 src={submittedPlayer.image}
                 alt={submittedPlayer.name}
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-500 shadow-md shrink-0"
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-500 shadow-md shrink-0 bg-slate-800"
               />
               <div>
                 <h3 className="font-sports text-2xl font-bold text-white uppercase">{submittedPlayer.name}</h3>
-                <p className="text-xs text-slate-400">{submittedPlayer.city} • Age {submittedPlayer.age}</p>
-                <div className="mt-2 text-xs font-bold text-emerald-400">
-                  Base Price: <span className="font-digital text-base text-amber-400">{formatINR(submittedPlayer.basePrice)}</span>
-                </div>
+                {submittedPlayer.nickname && (
+                  <p className="text-xs text-amber-400 font-bold">Jersey: "{submittedPlayer.nickname}" #{submittedPlayer.jerseyNumber}</p>
+                )}
+                <p className="text-xs text-slate-400">
+                  {submittedPlayer.faliyu ? `${submittedPlayer.faliyu}, ` : ''}{submittedPlayer.city} • Age {submittedPlayer.age}
+                </p>
+                {submittedPlayer.jerseySize && (
+                  <p className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+                    Size: {submittedPlayer.jerseySize}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -292,6 +339,26 @@ export const PlayerRegistrationPage: React.FC = () => {
                 <span className="text-white font-semibold">{submittedPlayer.bowlingStyle}</span>
               </div>
             </div>
+
+            {/* Payment Proof Confirmation Pill */}
+            {submittedPlayer.paymentScreenshot && (
+              <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-emerald-400">
+                  <img src={submittedPlayer.paymentScreenshot} alt="Receipt" className="w-full h-full object-cover" />
+                </div>
+                <div className="text-xs">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>પેમેન્ટ સ્ક્રીનશોટ અપલોડ થયો છે</span>
+                  </span>
+                  {submittedPlayer.transactionId && (
+                    <span className="text-[10px] text-slate-400 font-mono block">
+                      Ref: {submittedPlayer.transactionId}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -300,12 +367,12 @@ export const PlayerRegistrationPage: React.FC = () => {
               onClick={() => openWhatsAppShare(
                 `🏏 *I just registered for KATASVAN PREMIER LEAGUE 2026 Auction!* 🏏\n` +
                 `👤 Name: ${submittedPlayer.name} (${submittedPlayer.role})\n` +
-                `📍 City: ${submittedPlayer.city}\n` +
-                `💰 Base Price: ${formatINR(submittedPlayer.basePrice)}\n` +
-                `Registration ID: ${submittedPlayer.regId}\n\n` +
+                `🎽 Jersey: ${submittedPlayer.nickname || submittedPlayer.name} #${submittedPlayer.jerseyNumber} (Size: ${submittedPlayer.jerseySize})\n` +
+                `📍 Faliyu & City: ${submittedPlayer.faliyu ? submittedPlayer.faliyu + ', ' : ''}${submittedPlayer.city}\n` +
+                `🎫 Registration ID: ${submittedPlayer.regId}\n\n` +
                 `👉 Register your name too: ${directPageUrl}`
               )}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 fill-current" />
               <span>Share My Card on WhatsApp</span>
@@ -313,7 +380,7 @@ export const PlayerRegistrationPage: React.FC = () => {
 
             <button
               onClick={() => setCurrentTab('players')}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
             >
               <span>View In Player Pool</span>
               <ArrowRight className="w-4 h-4" />
@@ -321,7 +388,7 @@ export const PlayerRegistrationPage: React.FC = () => {
 
             <button
               onClick={handleResetForAnother}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs cursor-pointer"
             >
               Register Another Player
             </button>
@@ -330,6 +397,7 @@ export const PlayerRegistrationPage: React.FC = () => {
       ) : (
         /* REGISTRATION FORM */
         <form onSubmit={handleSubmit} className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8">
+          
           {/* Section 1: Basic Information */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
@@ -340,6 +408,7 @@ export const PlayerRegistrationPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Full Name */}
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1.5">
                   Full Name (પૂરું નામ) *
@@ -354,12 +423,14 @@ export const PlayerRegistrationPage: React.FC = () => {
                 />
               </div>
 
+              {/* Jersey Name (ઉપનામ) */}
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1.5">
-                  Nickname / Jersey Name (ઉપનામ)
+                  Jersey Name (ઉપનામ) *
                 </label>
                 <input
                   type="text"
+                  required
                   value={form.nickname}
                   onChange={(e) => setForm({ ...form, nickname: e.target.value })}
                   placeholder="e.g. Harry, Hitman, Bullet"
@@ -367,6 +438,37 @@ export const PlayerRegistrationPage: React.FC = () => {
                 />
               </div>
 
+              {/* Faliyu (ફળિયું / ફળિયાનું નામ) */}
+              <div>
+                <label className="text-xs text-slate-300 font-bold block mb-1.5">
+                  Faliyu (ફળિયું / ફળિયાનું નામ) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.faliyu}
+                  onChange={(e) => setForm({ ...form, faliyu: e.target.value })}
+                  placeholder="e.g. પટેલ ફળિયું, નિશાળ ફળિયું, તળાવ ફળિયું"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* City / Village */}
+              <div>
+                <label className="text-xs text-slate-300 font-bold block mb-1.5">
+                  Village / City (ગામ / શહેર) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  placeholder="e.g. Katasvan, Songadh, Vyara, Surat"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* WhatsApp / Mobile Number */}
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1.5">
                   WhatsApp / Mobile Number (મોબાઇલ નંબર) *
@@ -384,20 +486,7 @@ export const PlayerRegistrationPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-300 font-bold block mb-1.5">
-                  City / Village / Locality (ગામ / શહેર) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  placeholder="e.g. Katasvan, Songadh, Vyara, Surat"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
+              {/* Age */}
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1.5">
                   Age (ઉંમર) *
@@ -412,17 +501,49 @@ export const PlayerRegistrationPage: React.FC = () => {
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-amber-400"
                 />
               </div>
+            </div>
 
+            {/* Jersey Details Row: Jersey Size + Jersey Number */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {/* Jersey Size */}
+              <div>
+                <label className="text-xs text-slate-300 font-bold flex items-center gap-1.5 mb-1.5">
+                  <Shirt className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Jersey Size (જર્સી સાઈઝ) *</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {JERSEY_SIZES.map((size) => {
+                    const isSelected = form.jerseySize === size;
+                    return (
+                      <button
+                        type="button"
+                        key={size}
+                        onClick={() => setForm({ ...form, jerseySize: size })}
+                        className={`py-2.5 px-2 rounded-xl text-xs font-bold transition border cursor-pointer text-center ${
+                          isSelected
+                            ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black'
+                            : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Preferred Jersey Number */}
               <div>
                 <label className="text-xs text-slate-300 font-bold block mb-1.5">
-                  Preferred Jersey Number (જર્સી નંબર)
+                  Preferred Jersey Number (જર્સી નંબર) *
                 </label>
                 <input
                   type="text"
+                  required
                   value={form.jerseyNumber}
                   onChange={(e) => setForm({ ...form, jerseyNumber: e.target.value })}
                   placeholder="e.g. 7, 18, 45, 99"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-amber-400 font-mono font-bold"
                 />
               </div>
             </div>
@@ -450,7 +571,7 @@ export const PlayerRegistrationPage: React.FC = () => {
                       type="button"
                       key={r}
                       onClick={() => setForm({ ...form, role: r })}
-                      className={`p-3.5 rounded-2xl text-xs font-bold transition flex flex-col items-center gap-1.5 border text-center ${
+                      className={`p-3.5 rounded-2xl text-xs font-bold transition flex flex-col items-center gap-1.5 border text-center cursor-pointer ${
                         isSelected
                           ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
                           : 'bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-600'
@@ -501,191 +622,218 @@ export const PlayerRegistrationPage: React.FC = () => {
                 </select>
               </div>
             </div>
-
-            {/* Base Price Selection */}
-            <div>
-              <label className="text-xs text-slate-300 font-bold block mb-2">
-                Requested Base Price (અપેક્ષિત બેઝ પ્રાઈઝ) *
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {[5000, 10000, 15000, 20000, 25000].map((bp) => {
-                  const isSelected = form.basePrice === bp;
-                  return (
-                    <button
-                      type="button"
-                      key={bp}
-                      onClick={() => setForm({ ...form, basePrice: bp })}
-                      className={`p-3 rounded-xl text-xs font-bold font-digital transition border text-center ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black border-amber-400 shadow-md'
-                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      <span className="text-sm block">{formatINR(bp)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
-          {/* Section 3: Profile Photo / Action Avatar */}
+          {/* Section 3: Profile Photo Upload (Single Upload) */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
               <ImageIcon className="w-5 h-5 text-amber-400" />
               <h2 className="font-sports text-xl font-bold text-white uppercase tracking-wide">
-                3. Player Photo / ફોટો પસંદ કરો
+                3. Player Photo / ફોટો અપલોડ કરો
               </h2>
             </div>
 
-            <div>
-              <p className="text-xs text-slate-400 mb-3">
-                Select an action avatar preset or enter your custom photo URL:
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+              <p className="text-xs text-slate-300">
+                તમારો એક સ્પષ્ટ પાસપોર્ટ સાઇઝ અથવા ક્રિકેટ ડ્રેસ વાળો ફોટો અપલોડ કરો (Upload single player photo from your mobile or computer):
               </p>
 
-              {/* Action photo presets */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 mb-3">
-                {PHOTO_PRESETS.map((preset, idx) => {
-                  const isSelected = form.image === preset.url;
-                  return (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => handlePresetSelect(preset.url)}
-                      className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition ${
-                        isSelected ? 'border-amber-400 scale-105 shadow-lg shadow-amber-500/30' : 'border-slate-800 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-amber-500/30 flex items-center justify-center">
-                          <Check className="w-6 h-6 text-white font-bold drop-shadow" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Hidden File Input for Player Photo */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                id="player-photo-input"
+              />
 
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Custom Photo URL (ઓપ્શનલ)</label>
-                <input
-                  type="url"
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
-                />
-              </div>
+              {imagePreview ? (
+                /* Uploaded Photo Preview Card */
+                <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-900 border border-emerald-500/50 rounded-2xl">
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Uploaded Player Photo"
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-emerald-400 shadow-xl"
+                    />
+                    <span className="absolute -top-2 -right-2 bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow">
+                      Selected
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-center sm:text-left flex-1">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-emerald-400 font-bold text-xs">
+                      <Check className="w-4 h-4" />
+                      <span>ફોટો સફળતાપૂર્વક સિલેક્ટ થયો છે</span>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      This photo will appear on your live auction bidding card and big screen broadcast.
+                    </p>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-amber-400" />
+                        <span>બીજો ફોટો બદલો</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>હટાવો</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Upload Trigger Dropzone */
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-700 hover:border-amber-400 bg-slate-900/60 hover:bg-slate-900 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition group space-y-3"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto group-hover:scale-110 transition shadow">
+                    <Upload className="w-7 h-7" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-white text-sm">
+                      Click to Upload Photo / ફોટો પસંદ કરવા અહી ક્લિક કરો
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Supports JPG, PNG, WEBP (Max 5MB). Mobile camera photo supported.
+                    </p>
+                  </div>
+
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-[11px] text-amber-400 font-semibold border border-slate-700">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>કેમેરા અથવા ગેલેરીમાંથી ફોટો લો</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Section 4: Statistics & Records */}
+          {/* Section 4: Registration Fee Payment & Screenshot Upload */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
-              <Trophy className="w-5 h-5 text-amber-400" />
-              <h2 className="font-sports text-xl font-bold text-white uppercase tracking-wide">
-                4. Cricket Stats & Records / પાછલા રેકોર્ડ્સ
-              </h2>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-emerald-400" />
+                <h2 className="font-sports text-xl font-bold text-white uppercase tracking-wide">
+                  4. Registration Fee Payment / પેમેન્ટ સ્ક્રીનશોટ
+                </h2>
+              </div>
+              <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">
+                Payment Proof
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Matches Played</label>
-                <input
-                  type="number"
-                  value={form.matches}
-                  onChange={(e) => setForm({ ...form, matches: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
+            <div className="bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-5 space-y-4">
+              <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>Google Pay, PhonePe, Paytm અથવા UPI પેમેન્ટ સ્ક્રીનશોટ અપલોડ કરો:</span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  ટુર્નામેન્ટ રજીસ્ટ્રેશન ફી જમા કરાવીને તેની પહોંચ/ટ્રાન્ઝેક્શનનો સ્ક્રીનશોટ નીચે અપલોડ કરો જેથી ઓર્ગેનાઇઝર તમારી ફી વેરિફાય કરી શકે.
+                </p>
               </div>
 
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Total Runs</label>
-                <input
-                  type="number"
-                  value={form.runs}
-                  onChange={(e) => setForm({ ...form, runs: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Highest Score</label>
-                <input
-                  type="text"
-                  value={form.highestScore}
-                  onChange={(e) => setForm({ ...form, highestScore: e.target.value })}
-                  placeholder="e.g. 74*"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Total Wickets</label>
-                <input
-                  type="number"
-                  value={form.wickets}
-                  onChange={(e) => setForm({ ...form, wickets: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Best Bowling</label>
-                <input
-                  type="text"
-                  value={form.bestBowling}
-                  onChange={(e) => setForm({ ...form, bestBowling: e.target.value })}
-                  placeholder="e.g. 4/15"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Strike Rate</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={form.strikeRate}
-                  onChange={(e) => setForm({ ...form, strikeRate: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">50s Scored</label>
-                <input
-                  type="number"
-                  value={form.fifties}
-                  onChange={(e) => setForm({ ...form, fifties: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-bold block mb-1">Economy Rate</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={form.economy}
-                  onChange={(e) => setForm({ ...form, economy: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-300 font-bold block mb-1.5">
-                Player Bio / Achievements (તમારી સિદ્ધિઓ / નોંધ)
-              </label>
-              <textarea
-                rows={2}
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                placeholder="e.g. Hard-hitting middle-order finisher and death overs specialist. Won Man of the Match in Songadh Cup 2025."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+              {/* Hidden File Input for Payment Screenshot */}
+              <input
+                type="file"
+                ref={paymentFileInputRef}
+                accept="image/*"
+                onChange={handlePaymentUpload}
+                className="hidden"
+                id="player-payment-input"
               />
+
+              {paymentPreview ? (
+                /* Uploaded Payment Screenshot Preview Card */
+                <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-900 border border-emerald-500/60 rounded-2xl shadow-lg">
+                  <div className="relative">
+                    <img
+                      src={paymentPreview}
+                      alt="Uploaded Payment Receipt"
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-emerald-400 shadow-xl"
+                    />
+                    <span className="absolute -top-2 -right-2 bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow">
+                      Paid Proof
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-center sm:text-left flex-1">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-emerald-400 font-bold text-xs">
+                      <FileCheck className="w-4 h-4" />
+                      <span>પેમેન્ટ સ્ક્રીનશોટ જોડાઈ ગયો છે (Screenshot Uploaded)</span>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Receipt attached with your application for committee verification.
+                    </p>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => paymentFileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>બીજો સ્ક્રીનશોટ બદલો</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemovePayment}
+                        className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>હટાવો</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Payment Upload Trigger Dropzone */
+                <div
+                  onClick={() => paymentFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/10 hover:bg-emerald-950/20 rounded-2xl p-6 sm:p-7 text-center cursor-pointer transition group space-y-2.5"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto group-hover:scale-110 transition shadow">
+                    <Receipt className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-white text-sm">
+                      Upload Payment Screenshot / પેમેન્ટ સ્ક્રીનશોટ અપલોડ કરો *
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      GPay, PhonePe, Paytm transaction screenshot (JPG / PNG / WEBP)
+                    </p>
+                  </div>
+
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/40 text-[11px] text-emerald-400 font-semibold">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>સ્ક્રીનશોટ સિલેક્ટ કરવા અહી ક્લિક કરો</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Optional UPI Reference / UTR Number Input */}
+              <div className="pt-2">
+                <label className="text-xs text-slate-300 font-bold block mb-1.5">
+                  UPI UTR / Ref No. (ટ્રાન્ઝેક્શન નંબર - ઓપ્શનલ)
+                </label>
+                <input
+                  type="text"
+                  value={form.transactionId}
+                  onChange={(e) => setForm({ ...form, transactionId: e.target.value })}
+                  placeholder="e.g. 402819284721 or UPI Ref ID"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-400"
+                />
+              </div>
             </div>
           </div>
 
@@ -697,17 +845,17 @@ export const PlayerRegistrationPage: React.FC = () => {
                 required
                 checked={form.agreeTerms}
                 onChange={(e) => setForm({ ...form, agreeTerms: e.target.checked })}
-                className="w-5 h-5 rounded text-amber-500 bg-slate-950 border-slate-700 mt-0.5"
+                className="w-5 h-5 rounded text-amber-500 bg-slate-950 border-slate-700 mt-0.5 cursor-pointer"
               />
               <span className="text-xs text-slate-400">
-                હું ખાતરી આપું છું કે ઉપર આપેલી તમામ માહિતી સાચી છે અને હું <strong>Katasvan Premier League 2026</strong> ટુર્નામેન્ટના તમામ નિયમોનું પાલન કરીશ. (I agree to tournament rules and player pool auction terms).
+                હું ખાતરી આપું છું કે ઉપર આપેલી તમામ માહિતી અને પેમેન્ટ સ્ક્રીનશોટ સાચા છે અને હું <strong>Katasvan Premier League 2026</strong> ટુર્નામેન્ટના તમામ નિયમોનું પાલન કરીશ. (I agree to tournament rules and player pool auction terms).
               </span>
             </label>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black text-base uppercase tracking-wider shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2.5 transition transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black text-base uppercase tracking-wider shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2.5 transition transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>સબમિટ થઈ રહ્યું છે...</span>

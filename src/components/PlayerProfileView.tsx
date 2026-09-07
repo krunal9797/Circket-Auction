@@ -130,6 +130,27 @@ export const PlayerProfileView: React.FC = () => {
             </div>
           </div>
 
+          {/* Payment Proof Card (If uploaded) */}
+          {player.paymentScreenshot && (
+            <div className="bg-slate-900/90 border border-emerald-500/30 p-4 rounded-2xl flex items-center gap-3">
+              <img
+                src={player.paymentScreenshot}
+                alt="Payment Proof"
+                className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
+              />
+              <div className="text-xs">
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span>Payment Screenshot Attached</span>
+                </span>
+                {player.transactionId && (
+                  <span className="text-[10px] text-slate-400 font-mono block">
+                    Ref: {player.transactionId}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Acquired Franchise Card */}
           {isSold && soldTeam && (
             <div className="bg-slate-900/90 border border-emerald-500/30 p-4 rounded-2xl flex items-center justify-between">
@@ -180,8 +201,12 @@ export const PlayerProfileView: React.FC = () => {
                 <strong className="text-xs text-slate-200">{player.age} Yrs ({player.dob})</strong>
               </div>
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Home City</span>
-                <strong className="text-xs text-slate-200">{player.city}</strong>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Home / Faliyu</span>
+                <strong className="text-xs text-slate-200">{player.faliyu ? `${player.faliyu}, ` : ''}{player.city}</strong>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Jersey Details</span>
+                <strong className="text-xs text-amber-400">#{player.jerseyNumber || '7'} {player.jerseySize ? `(${player.jerseySize})` : ''}</strong>
               </div>
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
                 <span className="text-[10px] text-slate-400 font-semibold uppercase block">Role Category</span>

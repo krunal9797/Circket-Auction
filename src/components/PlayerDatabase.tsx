@@ -327,11 +327,13 @@ export const PlayerDatabase: React.FC = () => {
 
                       {/* Name & Origin */}
                       <div className="absolute bottom-3 left-3 right-3">
-                        <span className="text-[11px] text-slate-300 font-medium">{player.city} • Age {player.age}</span>
+                        <span className="text-[11px] text-slate-300 font-medium">{player.faliyu ? `${player.faliyu}, ` : ''}{player.city} • Age {player.age}</span>
                         <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
                           {player.name}
                         </h3>
-                        <p className="text-[11px] text-slate-400 italic font-medium">“{player.nickname}”</p>
+                        <p className="text-[11px] text-slate-400 italic font-medium">
+                          Jersey: “{player.nickname}” {player.jerseyNumber ? `#${player.jerseyNumber}` : ''} {player.jerseySize ? `(${player.jerseySize})` : ''}
+                        </p>
                       </div>
                     </div>
 
