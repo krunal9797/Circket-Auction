@@ -202,8 +202,8 @@ export const mapRowToPlayer = (row: Record<string, any>, rowIndex: number): Pars
   const transactionId = cleanStr(rawTxn) || undefined;
 
   // Base price
-  const rawBase = findValue(['base price', 'base', 'કિંમત']);
-  const basePrice = rawBase ? parseInt(String(rawBase).replace(/[^0-9]/g, ''), 10) : 5000;
+  const rawBase = findValue(['base price', 'base', 'કિંમત', 'બેઝ પ્રાઈઝ']);
+  const basePrice = rawBase ? parseInt(String(rawBase).replace(/[^0-9]/g, ''), 10) : 1000;
 
   const errors: string[] = [];
   if (!name) {
@@ -227,7 +227,7 @@ export const mapRowToPlayer = (row: Record<string, any>, rowIndex: number): Pars
     image,
     paymentScreenshot,
     transactionId,
-    basePrice: isNaN(basePrice) || basePrice <= 0 ? 5000 : basePrice,
+    basePrice: isNaN(basePrice) || basePrice <= 0 ? 1000 : basePrice,
     originalData: row,
     errors,
     isValid: errors.length === 0,
@@ -345,7 +345,7 @@ export const downloadSampleExcelTemplate = () => {
  */
 export const convertParsedRowToPlayer = (
   row: ParsedPlayerRow,
-  defaultBasePrice: number = 5000
+  defaultBasePrice: number = 1000
 ): Omit<Player, 'id' | 'bidHistory' | 'status'> => {
   return {
     name: row.name,

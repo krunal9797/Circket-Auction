@@ -303,7 +303,7 @@ export const TeamOwnerPortal: React.FC = () => {
   const spentPercentage = Math.round((authenticatedTeam.totalSpent / authenticatedTeam.startingBudget) * 100) || 0;
   const isHighestBidder = auctionState.highestBidderTeamId === authenticatedTeam.id;
   const nextMinBid = auctionState.highestBidderTeamId === null
-    ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
+    ? (activePlayer?.basePrice || 1000)
     : auctionState.currentBid + 1000;
 
   return (
@@ -575,18 +575,29 @@ export const TeamOwnerPortal: React.FC = () => {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[1000, 2000, 5000, 10000].map((inc) => {
-                const projectedBid = auctionState.highestBidderTeamId === null
-                  ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
-                  : (auctionState.currentBid + inc);
+              {(auctionState.highestBidderTeamId === null
+                ? [
+                    { label: 'Base Price', inc: 0, amount: activePlayer?.basePrice || 1000 },
+                    { label: '+₹1,000', inc: 1000, amount: (activePlayer?.basePrice || 1000) + 1000 },
+                    { label: '+₹2,000', inc: 2000, amount: (activePlayer?.basePrice || 1000) + 2000 },
+                    { label: '+₹5,000', inc: 5000, amount: (activePlayer?.basePrice || 1000) + 5000 },
+                  ]
+                : [
+                    { label: '+₹1,000', inc: 1000, amount: auctionState.currentBid + 1000 },
+                    { label: '+₹2,000', inc: 2000, amount: auctionState.currentBid + 2000 },
+                    { label: '+₹5,000', inc: 5000, amount: auctionState.currentBid + 5000 },
+                    { label: '+₹10,000', inc: 10000, amount: auctionState.currentBid + 10000 },
+                  ]
+              ).map((btn) => {
+                const projectedBid = btn.amount;
                 const isAffordable = projectedBid <= authenticatedTeam.remainingBudget;
                 const isDisabled = isHighestBidder || !isAffordable;
 
                 return (
                   <button
-                    key={inc}
+                    key={btn.label}
                     type="button"
-                    onClick={() => handlePlaceIncrementBid(inc)}
+                    onClick={() => handlePlaceIncrementBid(btn.inc)}
                     disabled={isDisabled}
                     className={`py-3.5 px-4 rounded-xl border font-black text-xs uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
                       isDisabled
@@ -603,7 +614,7 @@ export const TeamOwnerPortal: React.FC = () => {
                   >
                     <div className="flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>+ {formatINR(inc)}</span>
+                      <span>{btn.label}</span>
                     </div>
                     <span className="text-[10px] font-digital font-normal opacity-75">
                       {isHighestBidder ? 'Leading' : !isAffordable ? 'Over Budget' : formatINR(projectedBid)}
@@ -615,6 +626,7 @@ export const TeamOwnerPortal: React.FC = () => {
 
             {/* Big Primary Place Bid Button */}
             {(() => {
+              const isOpeningBid = auctionState.highestBidderTeamId === null;
               const primaryProjectedBid = nextMinBid;
               const isAffordable = primaryProjectedBid <= authenticatedTeam.remainingBudget;
               const isDisabled = isHighestBidder || !isAffordable;
@@ -623,7 +635,7 @@ export const TeamOwnerPortal: React.FC = () => {
                 <div className="space-y-1.5">
                   <button
                     type="button"
-                    onClick={() => handlePlaceIncrementBid(1000)}
+                    onClick={() => handlePlaceIncrementBid(isOpeningBid ? 0 : 1000)}
                     disabled={isDisabled}
                     className={`w-full py-4 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider shadow-2xl flex items-center justify-center gap-2 transition active:scale-[0.99] ${
                       isHighestBidder
@@ -639,7 +651,9 @@ export const TeamOwnerPortal: React.FC = () => {
                         ? `👑 You Are Leading at ${formatINR(auctionState.currentBid)}` 
                         : !isAffordable
                         ? `⚠️ Insufficient Purse for ${formatINR(primaryProjectedBid)}`
-                        : `Bid ${formatINR(primaryProjectedBid)} as ${authenticatedTeam.name}`}
+                        : isOpeningBid
+                        ? `🏏 Open Bid @ ${formatINR(primaryProjectedBid)} as ${authenticatedTeam.name}`
+                        : `Bid ${formatINR(primaryProjectedBid)} (+₹1,000) as ${authenticatedTeam.name}`}
                     </span>
                   </button>
                   {!isAffordable && !isHighestBidder && (

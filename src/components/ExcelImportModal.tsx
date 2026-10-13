@@ -48,7 +48,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   const [isImporting, setIsImporting] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedPlayerRow[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-  const [defaultBasePrice, setDefaultBasePrice] = useState<number>(5000);
+  const [defaultBasePrice, setDefaultBasePrice] = useState<number>(1000);
   const [importResult, setImportResult] = useState<{ total: number } | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -407,8 +407,9 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                       onChange={(e) => setDefaultBasePrice(Number(e.target.value))}
                       className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white font-bold"
                     >
+                      <option value="1000">₹1,000 (Default)</option>
                       <option value="2000">₹2,000</option>
-                      <option value="5000">₹5,000 (Default)</option>
+                      <option value="5000">₹5,000</option>
                       <option value="10000">₹10,000</option>
                       <option value="15000">₹15,000</option>
                       <option value="20000">₹20,000</option>

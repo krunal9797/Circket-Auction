@@ -268,13 +268,26 @@ export const LiveAuctionBoard: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
-                  {[1000, 2000, 5000, 10000].map(inc => (
+                  {(auctionState.highestBidderTeamId === null
+                    ? [
+                        { label: `Base (${formatINR(activePlayer.basePrice || 1000)})`, inc: 0 },
+                        { label: '+₹1,000', inc: 1000 },
+                        { label: '+₹2,000', inc: 2000 },
+                        { label: '+₹5,000', inc: 5000 },
+                      ]
+                    : [
+                        { label: '+₹1,000', inc: 1000 },
+                        { label: '+₹2,000', inc: 2000 },
+                        { label: '+₹5,000', inc: 5000 },
+                        { label: '+₹10,000', inc: 10000 },
+                      ]
+                  ).map(btn => (
                     <button
-                      key={inc}
-                      onClick={() => handleQuickBid(inc)}
+                      key={btn.label}
+                      onClick={() => handleQuickBid(btn.inc)}
                       className="py-2.5 rounded-xl bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400 text-white hover:text-amber-400 font-digital font-bold text-xs sm:text-sm transition active:scale-95"
                     >
-                      +{formatINR(inc)}
+                      {btn.label}
                     </button>
                   ))}
                 </div>

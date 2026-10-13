@@ -130,8 +130,8 @@ export const PlayerRegistrationPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Default standard tournament base price is ₹5,000
-      const standardBasePrice = 5000;
+      // Default standard tournament base price is ₹1,000
+      const standardBasePrice = 1000;
       
       const defaultImage = form.image || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop&q=80';
 

@@ -100,7 +100,7 @@ export const AdminPanel: React.FC = () => {
     city: 'Mumbai',
     battingStyle: 'Right-hand bat' as BattingStyle,
     bowlingStyle: 'Right-arm medium' as BowlingStyle,
-    basePrice: 10000,
+    basePrice: 1000,
     matches: 45,
     innings: 42,
     runs: 1250,
@@ -188,7 +188,7 @@ export const AdminPanel: React.FC = () => {
       city: player.city || '',
       battingStyle: player.battingStyle || 'Right-hand bat',
       bowlingStyle: player.bowlingStyle || 'Right-arm medium',
-      basePrice: player.basePrice ?? 10000,
+      basePrice: player.basePrice ?? 1000,
       matches: player.stats?.matches ?? 0,
       innings: player.stats?.innings ?? 0,
       runs: player.stats?.runs ?? 0,
@@ -525,7 +525,7 @@ export const AdminPanel: React.FC = () => {
               city: 'Mumbai',
               battingStyle: 'Right-hand bat',
               bowlingStyle: 'Right-arm medium',
-              basePrice: 10000,
+              basePrice: 1000,
               matches: 30,
               innings: 28,
               runs: 850,
@@ -685,18 +685,35 @@ export const AdminPanel: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="sm:col-span-6 flex gap-2">
+                <div className="sm:col-span-6 flex gap-2 flex-wrap">
+                  {auctionState.highestBidderTeamId === null && (
+                    <button
+                      onClick={() => placeBid(selectedBidderTeamId, 0)}
+                      disabled={!activePlayer}
+                      className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase disabled:opacity-40 whitespace-nowrap"
+                      title="Open bid at base price"
+                    >
+                      Open @ ₹{activePlayer ? (activePlayer.basePrice || 1000).toLocaleString('en-IN') : '1,000'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => placeBid(selectedBidderTeamId, 1000)}
+                    disabled={!activePlayer}
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black uppercase disabled:opacity-40 whitespace-nowrap"
+                  >
+                    +₹1,000 Bid
+                  </button>
                   <button
                     onClick={() => placeBid(selectedBidderTeamId, 2000)}
                     disabled={!activePlayer}
-                    className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase disabled:opacity-40"
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase disabled:opacity-40 whitespace-nowrap"
                   >
                     +₹2,000 Bid
                   </button>
                   <button
                     onClick={() => placeBid(selectedBidderTeamId, 5000)}
                     disabled={!activePlayer}
-                    className="flex-1 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-black text-xs font-black uppercase disabled:opacity-40"
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-black text-xs font-black uppercase disabled:opacity-40 whitespace-nowrap"
                   >
                     +₹5,000 Bid
                   </button>
@@ -948,7 +965,7 @@ export const AdminPanel: React.FC = () => {
                 step="500"
                 min="1000"
                 max="100000"
-                value={playerForm.basePrice ?? 10000}
+                value={playerForm.basePrice ?? 1000}
                 onChange={(e) => setPlayerForm({ ...playerForm, basePrice: Number(e.target.value) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-amber-400 font-digital font-bold focus:outline-none focus:border-amber-400"
               />

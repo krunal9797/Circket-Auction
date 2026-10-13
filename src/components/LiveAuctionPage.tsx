@@ -559,20 +559,31 @@ export const LiveAuctionPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {[1000, 2000, 5000, 10000].map((inc) => {
-                      const projectedBid = auctionState.highestBidderTeamId === null
-                        ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
-                        : (auctionState.currentBid + inc);
+                    {(auctionState.highestBidderTeamId === null
+                      ? [
+                          { label: 'Base Price', inc: 0, amount: activePlayer?.basePrice || 1000 },
+                          { label: '+₹1,000', inc: 1000, amount: (activePlayer?.basePrice || 1000) + 1000 },
+                          { label: '+₹2,000', inc: 2000, amount: (activePlayer?.basePrice || 1000) + 2000 },
+                          { label: '+₹5,000', inc: 5000, amount: (activePlayer?.basePrice || 1000) + 5000 },
+                        ]
+                      : [
+                          { label: '+₹1,000', inc: 1000, amount: auctionState.currentBid + 1000 },
+                          { label: '+₹2,000', inc: 2000, amount: auctionState.currentBid + 2000 },
+                          { label: '+₹5,000', inc: 5000, amount: auctionState.currentBid + 5000 },
+                          { label: '+₹10,000', inc: 10000, amount: auctionState.currentBid + 10000 },
+                        ]
+                    ).map((btn) => {
+                      const projectedBid = btn.amount;
                       const isAffordable = projectedBid <= activeTeam.remainingBudget;
                       const isLeading = auctionState.highestBidderTeamId === activeTeam.id;
                       const isDisabled = !isAffordable || isLeading;
 
                       return (
                         <button
-                          key={inc}
-                          id={`btn-bid-plus-${inc}`}
+                          key={btn.label}
+                          id={`btn-bid-plus-${btn.inc}`}
                           type="button"
-                          onClick={() => handleIncrementBid(inc)}
+                          onClick={() => handleIncrementBid(btn.inc)}
                           disabled={isDisabled}
                           className={`py-3 rounded-xl border font-digital font-extrabold text-sm sm:text-base transition active:scale-95 shadow flex flex-col items-center justify-center relative ${
                             isDisabled
@@ -587,7 +598,7 @@ export const LiveAuctionPage: React.FC = () => {
                               : `Bid ${formatINR(projectedBid)}`
                           }
                         >
-                          <span>+{formatINR(inc)}</span>
+                          <span>{btn.label}</span>
                           <span className="text-[9px] font-sans font-normal opacity-75">
                             {isLeading ? 'Leading' : !isAffordable ? 'Over Budget' : formatINR(projectedBid)}
                           </span>
@@ -598,9 +609,10 @@ export const LiveAuctionPage: React.FC = () => {
 
                   {/* Main Large PLACE BID Button */}
                   {(() => {
-                    const mainInc = auctionState.currentBid > 25000 ? 5000 : 2000;
-                    const mainProjectedBid = auctionState.highestBidderTeamId === null
-                      ? (auctionState.currentBid > 0 ? auctionState.currentBid : (activePlayer?.basePrice || 5000))
+                    const isOpeningBid = auctionState.highestBidderTeamId === null;
+                    const mainInc = isOpeningBid ? 0 : 1000;
+                    const mainProjectedBid = isOpeningBid 
+                      ? (activePlayer?.basePrice || 1000)
                       : (auctionState.currentBid + mainInc);
                     const canAffordMainBid = mainProjectedBid <= activeTeam.remainingBudget;
                     const isAlreadyWinning = auctionState.highestBidderTeamId === activeTeam.id;
@@ -625,8 +637,10 @@ export const LiveAuctionPage: React.FC = () => {
                             <span>👑 {activeTeam.name} IS CURRENT LEADER • {formatINR(auctionState.currentBid)}</span>
                           ) : !canAffordMainBid ? (
                             <span>⚠️ INSUFFICIENT PURSE FOR {formatINR(mainProjectedBid)}</span>
+                          ) : isOpeningBid ? (
+                            <span>🏏 PLACE OPENING BID • {formatINR(mainProjectedBid)}</span>
                           ) : (
-                            <span>PLACE BID • {formatINR(mainProjectedBid)}</span>
+                            <span>🔨 PLACE BID • {formatINR(mainProjectedBid)} (+₹1,000)</span>
                           )}
                         </button>
                         {!canAffordMainBid && !isAlreadyWinning && (

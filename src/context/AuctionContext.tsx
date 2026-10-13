@@ -624,7 +624,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       aiBidTimeoutRef.current = setTimeout(() => {
         const eligibleTeams = teams.filter(t => {
           if (t.id === auctionState.highestBidderTeamId) return false;
-          const nextBid = (auctionState.currentBid || player.basePrice) + (auctionState.currentBid > 25000 ? 5000 : 2000);
+          const nextBid = (auctionState.currentBid || player.basePrice || 1000) + (auctionState.currentBid > 25000 ? 5000 : 1000);
           return t.remainingBudget >= nextBid && nextBid <= maxValuation;
         });
 
@@ -732,11 +732,16 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         // Calculate next bid based on current atomic server state
-        const serverCurrentBid = remoteState.currentBid || 0;
+        const playerBasePrice = activePlayer?.basePrice || 1000;
+        const serverCurrentBid = remoteState.currentBid || playerBasePrice;
         let nextBid: number;
 
         if (remoteState.highestBidderTeamId === null) {
-          nextBid = serverCurrentBid > 0 ? serverCurrentBid : (activePlayer?.basePrice || 5000);
+          if (incrementAmount === 0) {
+            nextBid = serverCurrentBid > 0 ? serverCurrentBid : playerBasePrice;
+          } else {
+            nextBid = (serverCurrentBid > 0 ? serverCurrentBid : playerBasePrice) + incrementAmount;
+          }
         } else {
           nextBid = serverCurrentBid + incrementAmount;
         }
@@ -852,8 +857,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         // Verify target amount is strictly higher than on-server current bid
-        const serverCurrentBid = remoteState.currentBid || 0;
-        if (targetAmount <= serverCurrentBid && remoteState.highestBidderTeamId !== null) {
+        const playerBasePrice = activePlayer?.basePrice || 1000;
+        const serverCurrentBid = remoteState.currentBid || playerBasePrice;
+        if (remoteState.highestBidderTeamId === null) {
+          if (targetAmount < playerBasePrice) {
+            throw new Error(`Minimum opening bid is player base price of ₹${playerBasePrice.toLocaleString('en-IN')}.`);
+          }
+        } else if (targetAmount <= serverCurrentBid) {
           throw new Error(`Bid Overlap: The current winning bid is already ₹${serverCurrentBid.toLocaleString('en-IN')}. Your bid must be strictly higher than ₹${serverCurrentBid.toLocaleString('en-IN')}.`);
         }
 
