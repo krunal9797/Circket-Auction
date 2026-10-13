@@ -636,14 +636,6 @@ export const AdminPanel: React.FC = () => {
                 <span>{auctionState.isPaused ? 'Resume' : 'Pause'}</span>
               </button>
 
-              <button
-                onClick={() => resetTimer(20)}
-                disabled={!auctionState.isLive}
-                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40"
-              >
-                <RotateCcw className="w-5 h-5 text-blue-400" />
-                <span>Reset 20s</span>
-              </button>
 
               <button
                 onClick={() => markCurrentPlayerSold()}

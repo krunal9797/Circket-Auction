@@ -99,11 +99,11 @@ const DEFAULT_AUCTION_STATE: AuctionState = {
   highestBidderTeamId: null,
   highestBidderTeamName: null,
   currentRound: 1,
-  timerSeconds: 20,
-  initialTimerSeconds: 20,
+  timerSeconds: 0,
+  initialTimerSeconds: 0,
   bids: [],
   recentSoldPlayerId: null,
-  autoAiBidding: true,
+  autoAiBidding: false,
 };
 
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
@@ -561,87 +561,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [auctionState]);
 
-  // Timer Tick Hook
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-
-    if (auctionState.isLive && !auctionState.isPaused && auctionState.phase === 'bidding') {
-      interval = setInterval(() => {
-        setAuctionState(prev => {
-          if (prev.timerSeconds <= 1) {
-            if (prev.highestBidderTeamId && prev.currentBid > 0) {
-              setTimeout(() => markCurrentPlayerSold(), 0);
-            } else {
-              setTimeout(() => markCurrentPlayerUnsold(), 0);
-            }
-            return {
-              ...prev,
-              timerSeconds: 0,
-            };
-          }
-
-          const nextSec = prev.timerSeconds - 1;
-          if (nextSec <= 5) {
-            sounds.playTick(true);
-          } else if (nextSec % 5 === 0) {
-            sounds.playTick(false);
-          }
-
-          return {
-            ...prev,
-            timerSeconds: nextSec,
-          };
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [auctionState.isLive, auctionState.isPaused, auctionState.phase, markCurrentPlayerSold, markCurrentPlayerUnsold]);
-
-  // AI Bidding Simulation Engine
-  const aiBidTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (
-      auctionState.isLive &&
-      !auctionState.isPaused &&
-      auctionState.phase === 'bidding' &&
-      auctionState.autoAiBidding &&
-      auctionState.activePlayerId
-    ) {
-      const player = players.find(p => p.id === auctionState.activePlayerId);
-      if (!player) return;
-
-      const maxValuation = Math.min(
-        player.basePrice * 3.5,
-        player.role === 'All-Rounder' ? 45000 : 38000
-      );
-
-      const delay = Math.floor(Math.random() * 2500) + 2200;
-
-      aiBidTimeoutRef.current = setTimeout(() => {
-        const eligibleTeams = teams.filter(t => {
-          if (t.id === auctionState.highestBidderTeamId) return false;
-          const nextBid = (auctionState.currentBid || player.basePrice || 1000) + (auctionState.currentBid > 25000 ? 5000 : 1000);
-          return t.remainingBudget >= nextBid && nextBid <= maxValuation;
-        });
-
-        if (eligibleTeams.length > 0 && Math.random() > 0.25) {
-          const randomTeam = eligibleTeams[Math.floor(Math.random() * eligibleTeams.length)];
-          const increment = auctionState.currentBid > 25000 ? 5000 : (auctionState.currentBid > 15000 ? 2000 : 1000);
-          placeBid(randomTeam.id, increment);
-        }
-      }, delay);
-    }
-
-    return () => {
-      if (aiBidTimeoutRef.current) {
-        clearTimeout(aiBidTimeoutRef.current);
-      }
-    };
-  }, [auctionState.isLive, auctionState.isPaused, auctionState.currentBid, auctionState.autoAiBidding, auctionState.phase, auctionState.highestBidderTeamId, players, teams]);
+  // Auction timer and AI bidding simulation removed per user specification.
+  // Auctions are manual and operated by the auctioneer.
 
   // Start auction for a player (Firestore update)
   const startAuctionForPlayer = async (playerId: string) => {
@@ -657,11 +578,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       highestBidderTeamId: null,
       highestBidderTeamName: null,
       currentRound: 1,
-      timerSeconds: 20,
-      initialTimerSeconds: 20,
+      timerSeconds: 0,
+      initialTimerSeconds: 0,
       bids: [],
       recentSoldPlayerId: null,
-      autoAiBidding: auctionState.autoAiBidding,
+      autoAiBidding: false,
     };
 
     setCurrentTab('live_auction');
@@ -772,7 +693,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           currentBid: nextBid,
           highestBidderTeamId: team.id,
           highestBidderTeamName: team.name,
-          timerSeconds: Math.max(remoteState.timerSeconds || 0, 15),
+          timerSeconds: 0,
           bids: [newBidRecord, ...(remoteState.bids || [])],
         };
 
@@ -887,7 +808,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           currentBid: targetAmount,
           highestBidderTeamId: team.id,
           highestBidderTeamName: team.name,
-          timerSeconds: 20,
+          timerSeconds: 0,
           bids: [newBidRecord, ...(remoteState.bids || [])],
         };
 

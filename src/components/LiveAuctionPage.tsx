@@ -103,9 +103,6 @@ export const LiveAuctionPage: React.FC = () => {
     return 'Next Superstar Up for Auction 🔥 Place the opening bid!';
   };
 
-  // Timer color calculation
-  const isTimerCritical = auctionState.timerSeconds <= 5 && auctionState.isLive;
-
   return (
     <div className="space-y-8 pb-16 max-w-7xl mx-auto">
       {/* Broadcast Headline Ticker */}
@@ -126,21 +123,6 @@ export const LiveAuctionPage: React.FC = () => {
 
         {/* Live Controls Bar */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* AI Simulation Toggle */}
-          <button
-            id="btn-toggle-ai-bid"
-            onClick={toggleAutoAiBidding}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition ${
-              auctionState.autoAiBidding
-                ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-            }`}
-            title="When active, competing AI teams place organic bids automatically"
-          >
-            <Bot className="w-4 h-4 text-purple-400" />
-            <span>AI Bidding: {auctionState.autoAiBidding ? 'ON' : 'OFF'}</span>
-          </button>
-
           {/* Pause / Resume Button */}
           {auctionState.isLive && (
             <button
@@ -159,19 +141,6 @@ export const LiveAuctionPage: React.FC = () => {
                   <span>Pause</span>
                 </>
               )}
-            </button>
-          )}
-
-          {/* Reset Timer */}
-          {auctionState.isLive && (
-            <button
-              id="btn-reset-timer-live"
-              onClick={() => resetTimer(20)}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5"
-              title="Reset timer to 20 seconds"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
-              <span>+20s</span>
             </button>
           )}
 
@@ -420,27 +389,6 @@ export const LiveAuctionPage: React.FC = () => {
             <div className="bg-slate-900/95 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6 relative overflow-hidden animate-glow-gold">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-full pointer-events-none" />
 
-              {/* Countdown Timer Display */}
-              <div className="flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <Clock className={`w-6 h-6 ${isTimerCritical ? 'text-red-500 animate-spin' : 'text-amber-400'}`} />
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">AUCTION TIMER</span>
-                    <span className="text-xs text-slate-300 font-medium">Auto-hammer at 00:00</span>
-                  </div>
-                </div>
-                
-                {/* Big Animated Digital Timer */}
-                <div
-                  className={`font-digital text-4xl sm:text-5xl font-black px-4 py-1.5 rounded-xl border tracking-widest ${
-                    isTimerCritical
-                      ? 'bg-red-950/80 border-red-500 text-red-400 animate-pulse'
-                      : 'bg-slate-900 border-amber-500/50 text-amber-400'
-                  }`}
-                >
-                  {formatTimer(auctionState.timerSeconds)}
-                </div>
-              </div>
 
               {/* Current Bid & Highest Bidder Header */}
               <div className="grid grid-cols-2 gap-4 bg-slate-950/90 p-5 rounded-2xl border border-slate-800/90">

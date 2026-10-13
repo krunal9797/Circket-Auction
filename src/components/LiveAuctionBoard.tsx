@@ -186,16 +186,6 @@ export const LiveAuctionBoard: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Digital Countdown Timer Overlay */}
-                  <div className="absolute top-4 right-4">
-                    <div className={`font-digital text-3xl sm:text-4xl font-black px-4 py-1.5 rounded-2xl border shadow-2xl ${
-                      auctionState.timerSeconds <= 5 && auctionState.isLive
-                        ? 'bg-red-950/90 border-red-500 text-red-400 animate-pulse'
-                        : 'bg-black/80 backdrop-blur-md border-amber-500/60 text-amber-400'
-                    }`}>
-                      {formatTimer(auctionState.timerSeconds)}
-                    </div>
-                  </div>
 
                   {/* Player Name and Highest Bid Banner */}
                   <div className="absolute bottom-4 left-4 right-4 bg-slate-950/90 backdrop-blur-md p-4 rounded-2xl border border-slate-700/90 flex items-center justify-between">

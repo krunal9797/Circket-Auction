@@ -22,7 +22,8 @@ import {
   KeyRound,
   UserCheck,
   UserPlus,
-  Share2
+  Share2,
+  Eye
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { ViewTab } from '../types';
@@ -64,9 +65,9 @@ export const Navbar: React.FC = () => {
     { id: 'auction_board', label: 'Broadcast', icon: <Layers className="w-4 h-4" /> },
     { 
       id: 'team_portal', 
-      label: authenticatedTeam ? `${authenticatedTeam.shortCode} War Room` : 'War Room', 
-      icon: <KeyRound className="w-4 h-4 text-amber-400" />,
-      badge: authenticatedTeam ? 'AUTH' : undefined
+      label: 'War Room', 
+      icon: <Eye className="w-4 h-4 text-amber-400" />,
+      badge: '6 TEAMS'
     },
     { 
       id: 'register_player', 

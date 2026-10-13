@@ -189,8 +189,8 @@ export const HomePage: React.FC = () => {
                   </div>
                   <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-xl">
                     <span className="text-xl block mb-1">⚡</span>
-                    <span className="text-[11px] text-slate-400 block font-medium">Speed Bids</span>
-                    <strong className="text-sm font-bold text-emerald-400">Live Timer</strong>
+                    <span className="text-[11px] text-slate-400 block font-medium">Bidding</span>
+                    <strong className="text-sm font-bold text-emerald-400">Live Bids</strong>
                   </div>
                 </div>
 
@@ -635,7 +635,7 @@ export const HomePage: React.FC = () => {
           </div>
           <h4 className="font-bold text-white text-base">Fast Interactive Bidding</h4>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Use +₹1,000, +₹2,000, +₹5,000 or +₹10,000 quick buttons. Real-time countdown resets to 15s whenever a higher bid arrives.
+            Use +₹1,000, +₹2,000, +₹5,000 or +₹10,000 quick buttons. Real-time live bidding synchronized across all franchise devices.
           </p>
         </div>
 
@@ -645,7 +645,7 @@ export const HomePage: React.FC = () => {
           </div>
           <h4 className="font-bold text-white text-base">Admin & Broadcast Deck</h4>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Full auctioneer gavel controls, custom player/team additions, AI competitor bidding simulation, and complete result exports.
+            Full auctioneer gavel controls, custom player/team additions, real-time live war room tracking, and complete tournament result exports.
           </p>
         </div>
       </section>
