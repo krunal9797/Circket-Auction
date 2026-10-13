@@ -22,8 +22,9 @@ import {
   KeyRound
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
-import { formatINR, formatTimer } from '../utils/formatters';
+import { formatINR } from '../utils/formatters';
 import { SponsorSlideshow } from './SponsorSlideshow';
+import { AuctionResolutionModal } from './AuctionResolutionModal';
 
 export const LiveAuctionPage: React.FC = () => {
   const {
@@ -51,6 +52,15 @@ export const LiveAuctionPage: React.FC = () => {
 
   const [customBidAmount, setCustomBidAmount] = useState<string>('');
   const [bidNotification, setBidNotification] = useState<{ text: string; isError: boolean } | null>(null);
+  const [resolutionModal, setResolutionModal] = useState<{
+    isOpen: boolean;
+    type: 'sold' | 'unsold';
+    defaultTeamId?: string | null;
+    defaultAmount?: number;
+  }>({
+    isOpen: false,
+    type: 'sold',
+  });
 
   const effectiveBiddingTeamId = authenticatedTeamId || activeBiddingTeamId;
   const activeTeam = teams.find(t => t.id === effectiveBiddingTeamId) || teams[0];
@@ -62,7 +72,39 @@ export const LiveAuctionPage: React.FC = () => {
     setBidNotification({ text, isError });
     setTimeout(() => {
       setBidNotification(null);
-    }, 4000);
+    }, 6000);
+  };
+
+  const handleOpenSoldModal = (isCustom: boolean = false) => {
+    if (!activePlayer) return;
+    setResolutionModal({
+      isOpen: true,
+      type: 'sold',
+      defaultTeamId: isCustom ? null : (auctionState.highestBidderTeamId || null),
+      defaultAmount: isCustom ? activePlayer.basePrice || 1000 : (auctionState.currentBid || activePlayer.basePrice || 1000),
+    });
+  };
+
+  const handleOpenUnsoldModal = () => {
+    if (!activePlayer) return;
+    setResolutionModal({
+      isOpen: true,
+      type: 'unsold',
+    });
+  };
+
+  const handleConfirmSold = async (teamId: string, amount: number) => {
+    if (!activePlayer) return;
+    const targetTeam = teams.find(t => t.id === teamId);
+    await markCurrentPlayerSold(teamId, amount);
+    showNotification(`🔨 SUCCESS: ${activePlayer.name} has been SOLD to ${targetTeam?.name || 'team'} for ₹${amount.toLocaleString('en-IN')}!`, false);
+  };
+
+  const handleConfirmUnsold = async () => {
+    if (!activePlayer) return;
+    const playerName = activePlayer.name;
+    await markCurrentPlayerUnsold();
+    showNotification(`❌ UNSOLD: ${playerName} has been marked as UNSOLD!`, false);
   };
 
   const handleIncrementBid = async (increment: number) => {
@@ -644,21 +686,33 @@ export const LiveAuctionPage: React.FC = () => {
               )}
 
               {/* Auctioneer Quick Force Hammer Buttons */}
-              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs flex-wrap gap-2">
                 <span className="text-slate-500 font-semibold uppercase">Auctioneer Desk:</span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     id="btn-force-sold"
-                    onClick={() => markCurrentPlayerSold()}
-                    disabled={!auctionState.highestBidderTeamId}
-                    className="px-3 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40 font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                    onClick={() => handleOpenSoldModal(false)}
+                    disabled={!activePlayer}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40 font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                    title="Confirm Sold to current highest bidder (કન્ફર્મ કરો)"
                   >
                     🔨 Sold
                   </button>
                   <button
+                    id="btn-custom-sold"
+                    onClick={() => handleOpenSoldModal(true)}
+                    disabled={!activePlayer}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                    title="Custom Sold: Choose any team & custom amount"
+                  >
+                    ✏️ Custom Sold
+                  </button>
+                  <button
                     id="btn-force-unsold"
-                    onClick={markCurrentPlayerUnsold}
-                    className="px-3 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-bold flex items-center gap-1"
+                    onClick={handleOpenUnsoldModal}
+                    disabled={!activePlayer}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                    title="Confirm mark Unsold (અનસોલ્ડ કન્ફર્મ કરો)"
                   >
                     ❌ Unsold
                   </button>
@@ -723,6 +777,19 @@ export const LiveAuctionPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Auction Resolution (Sold / Unsold / Custom Sold) Confirmation Modal */}
+      <AuctionResolutionModal
+        isOpen={resolutionModal.isOpen}
+        type={resolutionModal.type}
+        player={activePlayer}
+        teams={teams}
+        defaultWinningTeamId={resolutionModal.defaultTeamId}
+        defaultAmount={resolutionModal.defaultAmount}
+        onConfirmSold={handleConfirmSold}
+        onConfirmUnsold={handleConfirmUnsold}
+        onClose={() => setResolutionModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

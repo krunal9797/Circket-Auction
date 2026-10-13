@@ -38,6 +38,7 @@ import { formatINR } from '../utils/formatters';
 import { SponsorSlideshow } from './SponsorSlideshow';
 import { ShareLinksModal } from './ShareLinksModal';
 import { ExcelImportModal } from './ExcelImportModal';
+import { AuctionResolutionModal } from './AuctionResolutionModal';
 import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
 export const AdminPanel: React.FC = () => {
@@ -87,6 +88,57 @@ export const AdminPanel: React.FC = () => {
 
   // Active Admin Sub-tab
   const [adminTab, setAdminTab] = useState<'control_room' | 'players' | 'teams' | 'sponsors' | 'add_player' | 'add_team'>('control_room');
+
+  // Sold / Unsold Confirmation Modal & Alerts
+  const [adminNotification, setAdminNotification] = useState<{ text: string; isError: boolean } | null>(null);
+  const [resolutionModal, setResolutionModal] = useState<{
+    isOpen: boolean;
+    type: 'sold' | 'unsold';
+    defaultTeamId?: string | null;
+    defaultAmount?: number;
+  }>({
+    isOpen: false,
+    type: 'sold',
+  });
+
+  const showAdminNotification = (text: string, isError: boolean = false) => {
+    setAdminNotification({ text, isError });
+    setTimeout(() => {
+      setAdminNotification(null);
+    }, 6000);
+  };
+
+  const handleOpenSoldModal = (isCustom: boolean = false) => {
+    if (!activePlayer) return;
+    setResolutionModal({
+      isOpen: true,
+      type: 'sold',
+      defaultTeamId: isCustom ? null : (auctionState.highestBidderTeamId || null),
+      defaultAmount: isCustom ? activePlayer.basePrice || 1000 : (auctionState.currentBid || activePlayer.basePrice || 1000),
+    });
+  };
+
+  const handleOpenUnsoldModal = () => {
+    if (!activePlayer) return;
+    setResolutionModal({
+      isOpen: true,
+      type: 'unsold',
+    });
+  };
+
+  const handleConfirmSold = async (teamId: string, amount: number) => {
+    if (!activePlayer) return;
+    const targetTeam = teams.find(t => t.id === teamId);
+    await markCurrentPlayerSold(teamId, amount);
+    showAdminNotification(`🔨 SUCCESS: ${activePlayer.name} has been SOLD to ${targetTeam?.name || 'team'} for ₹${amount.toLocaleString('en-IN')}!`, false);
+  };
+
+  const handleConfirmUnsold = async () => {
+    if (!activePlayer) return;
+    const playerName = activePlayer.name;
+    await markCurrentPlayerUnsold();
+    showAdminNotification(`❌ UNSOLD: ${playerName} has been marked as UNSOLD!`, false);
+  };
 
   // Player Form State
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
@@ -446,6 +498,32 @@ export const AdminPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin Notification Alert Banner */}
+      {adminNotification && (
+        <div
+          className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-sm font-bold shadow-xl transition-all animate-bounce ${
+            adminNotification.isError
+              ? 'bg-red-950 border-red-500/60 text-red-200'
+              : 'bg-emerald-950 border-emerald-500/60 text-emerald-200'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {adminNotification.isError ? (
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            <span>{adminNotification.text}</span>
+          </div>
+          <button
+            onClick={() => setAdminNotification(null)}
+            className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Admin Quick Statistics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
@@ -630,26 +708,37 @@ export const AdminPanel: React.FC = () => {
               <button
                 onClick={auctionState.isPaused ? resumeAuction : pauseAuction}
                 disabled={!auctionState.isLive}
-                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition"
               >
                 {auctionState.isPaused ? <Play className="w-5 h-5 text-emerald-400" /> : <Pause className="w-5 h-5 text-amber-400" />}
                 <span>{auctionState.isPaused ? 'Resume' : 'Pause'}</span>
               </button>
 
-
               <button
-                onClick={() => markCurrentPlayerSold()}
-                disabled={!auctionState.highestBidderTeamId}
-                className="p-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+                onClick={() => handleOpenSoldModal(false)}
+                disabled={!activePlayer}
+                className="p-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition"
+                title="Confirm Sold to current highest bidder (કન્ફર્મ કરો)"
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 <span>Mark SOLD</span>
               </button>
 
               <button
-                onClick={markCurrentPlayerUnsold}
+                onClick={() => handleOpenSoldModal(true)}
                 disabled={!activePlayer}
-                className="p-3 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-300 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+                className="p-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-amber-300 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition"
+                title="Custom Sold: Pick any team and amount"
+              >
+                <Gavel className="w-5 h-5 text-amber-400" />
+                <span>Custom Sold</span>
+              </button>
+
+              <button
+                onClick={handleOpenUnsoldModal}
+                disabled={!activePlayer}
+                className="p-3 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-300 font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition"
+                title="Confirm Mark UNSOLD (અનસોલ્ડ કન્ફર્મ કરો)"
               >
                 <XCircle className="w-5 h-5 text-red-400" />
                 <span>Mark UNSOLD</span>
@@ -1759,6 +1848,19 @@ export const AdminPanel: React.FC = () => {
       <ExcelImportModal
         isOpen={isExcelModalOpen}
         onClose={() => setIsExcelModalOpen(false)}
+      />
+
+      {/* Auction Resolution (Sold / Unsold / Custom Sold) Confirmation Modal */}
+      <AuctionResolutionModal
+        isOpen={resolutionModal.isOpen}
+        type={resolutionModal.type}
+        player={activePlayer}
+        teams={teams}
+        defaultWinningTeamId={resolutionModal.defaultTeamId}
+        defaultAmount={resolutionModal.defaultAmount}
+        onConfirmSold={handleConfirmSold}
+        onConfirmUnsold={handleConfirmUnsold}
+        onClose={() => setResolutionModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
