@@ -14,13 +14,15 @@ import {
   Share2,
   MessageCircle,
   Copy,
-  Check
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { PlayerRole, PlayerStatus } from '../types';
 import { formatINR } from '../utils/formatters';
 import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 import { ShareLinksModal } from './ShareLinksModal';
+import { ExcelImportModal } from './ExcelImportModal';
 
 type FilterType = 'All' | PlayerRole | 'Available' | 'Sold' | 'Unsold';
 
@@ -39,6 +41,7 @@ export const PlayerDatabase: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'basePrice' | 'runs' | 'wickets'>('basePrice');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const playerRegUrl = getShareableUrl('register_player');
@@ -148,6 +151,15 @@ export const PlayerDatabase: React.FC = () => {
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copiedLink ? 'Copied URL!' : 'Copy Link'}</span>
+          </button>
+
+          <button
+            onClick={() => setIsExcelModalOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black transition flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer"
+            title="Import players directly from Excel or Google Forms"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Import Excel / Forms</span>
           </button>
 
           <button
@@ -418,6 +430,12 @@ export const PlayerDatabase: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Excel / Google Forms Import Modal */}
+      <ExcelImportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+      />
     </div>
   );
 };

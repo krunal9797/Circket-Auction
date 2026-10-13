@@ -29,13 +29,15 @@ import {
   UserPlus,
   MessageCircle,
   Receipt,
-  X
+  X,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { Player, Team, PlayerRole, BattingStyle, BowlingStyle, Sponsor, SponsorTier } from '../types';
 import { formatINR } from '../utils/formatters';
 import { SponsorSlideshow } from './SponsorSlideshow';
 import { ShareLinksModal } from './ShareLinksModal';
+import { ExcelImportModal } from './ExcelImportModal';
 import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
 export const AdminPanel: React.FC = () => {
@@ -75,6 +77,7 @@ export const AdminPanel: React.FC = () => {
 
   const [isReseeding, setIsReseeding] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [viewingPaymentProof, setViewingPaymentProof] = useState<string | null>(null);
 
   // Admin authentication state
@@ -502,6 +505,14 @@ export const AdminPanel: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setIsExcelModalOpen(true)}
+          className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-emerald-800/80 hover:bg-emerald-700 text-white border border-emerald-500/50 shadow cursor-pointer"
+        >
+          <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
+          <span>Import Excel / Forms</span>
+        </button>
+
+        <button
           onClick={() => {
             setEditingPlayerId(null);
             setPlayerForm({
@@ -744,16 +755,25 @@ export const AdminPanel: React.FC = () => {
             <h3 className="font-sports text-2xl font-bold text-white uppercase">
               REGISTERED PLAYERS ROSTER
             </h3>
-            <button
-              onClick={() => {
-                setEditingPlayerId(null);
-                setAdminTab('add_player');
-              }}
-              className="px-3.5 py-1.5 bg-amber-500 text-black text-xs font-bold rounded-xl flex items-center gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Player</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsExcelModalOpen(true)}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Import Excel / Forms</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEditingPlayerId(null);
+                  setAdminTab('add_player');
+                }}
+                className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Player</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1726,6 +1746,11 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Excel & Google Sheets Import Modal */}
+      <ExcelImportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+      />
     </div>
   );
 };

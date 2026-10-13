@@ -24,11 +24,13 @@ import {
   Shirt,
   CreditCard,
   Receipt,
-  FileCheck
+  FileCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuction } from '../context/AuctionContext';
 import { PlayerRole, BattingStyle, BowlingStyle, Player } from '../types';
 import { formatINR } from '../utils/formatters';
+import { ExcelImportModal } from './ExcelImportModal';
 import { getShareableUrl, getWhatsAppShareText, openWhatsAppShare, copyToClipboard } from '../utils/shareUtils';
 
 const JERSEY_SIZES = ['S (36)', 'M (38)', 'L (40)', 'XL (42)', 'XXL (44)', '3XL (46)'];
@@ -61,6 +63,7 @@ export const PlayerRegistrationPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedPlayer, setSubmittedPlayer] = useState<any | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const paymentFileInputRef = useRef<HTMLInputElement>(null);
@@ -269,6 +272,15 @@ export const PlayerRegistrationPage: React.FC = () => {
                   <span>Copy Registration Link</span>
                 </>
               )}
+            </button>
+
+            {/* Quick Excel / Forms Import button for Organizers */}
+            <button
+              onClick={() => setIsExcelModalOpen(true)}
+              className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Import Excel / Forms</span>
             </button>
           </div>
         </div>
@@ -869,6 +881,12 @@ export const PlayerRegistrationPage: React.FC = () => {
           </div>
         </form>
       )}
+
+      {/* Excel / Google Forms Import Modal */}
+      <ExcelImportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+      />
     </div>
   );
 };

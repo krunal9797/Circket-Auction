@@ -61,6 +61,7 @@ interface AuctionContextType {
 
   // CRUD Operations on Firebase Server
   addPlayer: (newPlayerData: Omit<Player, 'id' | 'bidHistory' | 'status'>) => Promise<void>;
+  addPlayersBatch: (newPlayersList: Array<Omit<Player, 'id' | 'bidHistory' | 'status'>>) => Promise<void>;
   updatePlayer: (playerId: string, updatedData: Partial<Player>) => Promise<void>;
   deletePlayer: (playerId: string) => Promise<void>;
   addTeam: (newTeamData: Omit<Team, 'id' | 'totalSpent' | 'remainingBudget' | 'playersBought' | 'squadPlayerIds'>) => Promise<void>;
@@ -978,6 +979,33 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const addPlayersBatch = async (newPlayersList: Array<Omit<Player, 'id' | 'bidHistory' | 'status'>>) => {
+    if (!newPlayersList.length) return;
+    try {
+      // Chunk into batches of 400 (Firestore limit is 500)
+      const chunkSize = 400;
+      for (let i = 0; i < newPlayersList.length; i += chunkSize) {
+        const chunk = newPlayersList.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach((p, idx) => {
+          const newId = `p-${Date.now()}-${i + idx}-${Math.random().toString(36).substring(2, 6)}`;
+          const newPlayer: Player = {
+            ...p,
+            id: newId,
+            status: 'available',
+            bidHistory: [],
+          };
+          const ref = doc(db, 'players', newId);
+          batch.set(ref, newPlayer);
+        });
+        await batch.commit();
+      }
+    } catch (err) {
+      console.error('Firestore batch error adding players:', err);
+      throw err;
+    }
+  };
+
   const updatePlayer = async (playerId: string, updatedData: Partial<Player>) => {
     try {
       await updateDoc(doc(db, 'players', playerId), updatedData);
@@ -1179,6 +1207,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         resetTimer,
         toggleAutoAiBidding,
         addPlayer,
+        addPlayersBatch,
         updatePlayer,
         deletePlayer,
         addTeam,
